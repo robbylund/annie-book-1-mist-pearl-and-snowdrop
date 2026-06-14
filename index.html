@@ -1,0 +1,1925 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mist, Pearl, and Snowdrop - Interactive Book</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --paper: #fffaf0;
+      --paper-edge: #efe3cc;
+      --ink: #26313a;
+      --muted: #716a61;
+      --lavender: #7461a9;
+      --leaf: #496f58;
+      --page-shadow: rgba(30, 22, 12, 0.2);
+      --spine-shadow: rgba(47, 35, 24, 0.34);
+      --turn-duration: 180ms;
+      --turn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 14% 12%, rgba(255, 250, 240, 0.6), transparent 22%),
+        radial-gradient(circle at 88% 18%, rgba(116, 97, 169, 0.22), transparent 25%),
+        linear-gradient(135deg, #c9c1b1 0%, #efe7d8 42%, #c5c7bd 100%);
+      font-family: Georgia, "Times New Roman", serif;
+      letter-spacing: 0;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 14px 18px 16px;
+    }
+
+    .topbar,
+    .footerbar {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: clamp(20px, 2.1vw, 32px);
+      line-height: 1.05;
+      color: #23313a;
+    }
+
+    .spread-label {
+      margin: 4px 0 0;
+      font-size: 13px;
+      font-weight: 800;
+      color: rgba(39, 50, 58, 0.62);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .seriesbar {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+    }
+
+    .series-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(255, 250, 240, 0.74);
+      border: 1px solid rgba(39, 50, 58, 0.14);
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(39, 50, 58, 0.11);
+    }
+
+    .series-link,
+    .series-current {
+      min-width: 104px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .series-link {
+      color: #fffaf0;
+      background: #3f5c50;
+      text-decoration: none;
+      box-shadow: 0 8px 18px rgba(39, 50, 58, 0.14);
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .series-link:hover,
+    .series-link:focus-visible {
+      transform: translateY(-1px);
+      background: #496f58;
+      outline: none;
+    }
+
+    .series-current {
+      color: #26313a;
+      background: #fffaf0;
+      border: 1px solid rgba(116, 97, 169, 0.22);
+    }
+
+    .series-current::after {
+      content: "Current";
+      margin-left: 3px;
+      color: var(--lavender);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      display: inline-grid;
+      place-items: center;
+      color: #23313a;
+      background: rgba(255, 250, 240, 0.86);
+      border: 1px solid rgba(39, 50, 58, 0.16);
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(39, 50, 58, 0.12);
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+    }
+
+    .icon-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #fffaf0;
+    }
+
+    .icon-button:disabled {
+      cursor: default;
+      opacity: 0.38;
+      box-shadow: none;
+    }
+
+    .icon-button svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .book-link-button {
+      min-width: 86px;
+      height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 15px;
+      color: #fffaf0;
+      background: #3f5c50;
+      border: 1px solid rgba(39, 50, 58, 0.18);
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(39, 50, 58, 0.16);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .book-link-button:hover,
+    .book-link-button:focus-visible {
+      transform: translateY(-1px);
+      background: #496f58;
+      outline: none;
+    }
+
+    .book-link-button svg {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .stage {
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      perspective: 1900px;
+      overflow: hidden;
+    }
+
+    .book {
+      width: min(1180px, calc(100vw - 36px));
+      height: min(760px, calc(100vh - 184px));
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      filter: drop-shadow(0 28px 42px rgba(39, 50, 58, 0.28));
+      transform-style: preserve-3d;
+    }
+
+    .book.cover-mode {
+      width: min(560px, calc(100vw - 36px));
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .book.single-page-mode {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .book::before {
+      content: "";
+      position: absolute;
+      inset: 14px calc(50% - 15px);
+      z-index: 5;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, rgba(73, 50, 30, 0.26), rgba(255, 250, 240, 0.34), rgba(73, 50, 30, 0.3));
+      box-shadow: 0 0 24px var(--spine-shadow);
+      pointer-events: none;
+    }
+
+    .book::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      width: min(28%, 190px);
+      height: min(40%, 270px);
+      z-index: 16;
+      opacity: 0;
+      pointer-events: none;
+      filter: drop-shadow(0 16px 18px rgba(39, 50, 58, 0.28));
+      will-change: transform, opacity;
+    }
+
+    .book.turning-next::after {
+      right: 8px;
+      border-radius: 0 10px 0 78%;
+      clip-path: polygon(100% 0, 100% 100%, 0 0);
+      background:
+        linear-gradient(135deg, rgba(255, 252, 244, 1), rgba(255, 252, 244, 0.92) 34%, rgba(79, 56, 32, 0.46) 58%, rgba(255, 255, 255, 0.22) 68%, transparent 79%),
+        linear-gradient(315deg, rgba(255, 255, 255, 0.72), transparent 48%);
+      transform-origin: 100% 0;
+      animation: bookCornerCurlNext var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .book.turning-prev::after {
+      left: 8px;
+      border-radius: 10px 0 78% 0;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      background:
+        linear-gradient(225deg, rgba(255, 252, 244, 1), rgba(255, 252, 244, 0.92) 34%, rgba(79, 56, 32, 0.46) 58%, rgba(255, 255, 255, 0.22) 68%, transparent 79%),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.72), transparent 48%);
+      transform-origin: 0 0;
+      animation: bookCornerCurlPrev var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .book.cover-mode::before {
+      display: none;
+    }
+
+    .book.single-page-mode::before {
+      display: none;
+    }
+
+    .book.cover-mode::after,
+    .book.single-page-mode::after {
+      width: min(40%, 220px);
+      height: min(42%, 280px);
+    }
+
+    .book-page,
+    .turn-face {
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      background: var(--paper);
+      border: 1px solid rgba(73, 50, 30, 0.16);
+    }
+
+    .book-page {
+      transform-style: preserve-3d;
+    }
+
+    .left-page {
+      border-radius: 10px 2px 2px 10px;
+      box-shadow:
+        inset -28px 0 30px -28px rgba(54, 33, 18, 0.8),
+        0 14px 30px var(--page-shadow);
+      cursor: w-resize;
+    }
+
+    .right-page {
+      border-radius: 2px 10px 10px 2px;
+      box-shadow:
+        inset 28px 0 30px -28px rgba(54, 33, 18, 0.8),
+        0 14px 30px var(--page-shadow);
+      cursor: e-resize;
+    }
+
+    .book.cover-mode .left-page {
+      display: none;
+    }
+
+    .book.single-page-mode .left-page {
+      display: none;
+    }
+
+    .book.cover-mode .right-page {
+      display: block;
+      border-radius: 12px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 250, 240, 0.18),
+        inset 18px 0 24px -22px rgba(255, 250, 240, 0.62),
+        inset -18px 0 24px -22px rgba(20, 14, 8, 0.52),
+        0 24px 38px var(--page-shadow);
+    }
+
+    .book.single-page-mode .right-page {
+      border-radius: 12px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 250, 240, 0.16),
+        inset 18px 0 24px -22px rgba(255, 250, 240, 0.62),
+        inset -18px 0 24px -22px rgba(20, 14, 8, 0.52),
+        0 24px 38px var(--page-shadow);
+      cursor: e-resize;
+    }
+
+    .story-page {
+      padding: clamp(22px, 3vw, 44px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .story-content {
+      min-height: 0;
+      overflow: hidden;
+      display: block;
+    }
+
+    .story-content p {
+      margin: 0 0 12px;
+      font-size: var(--story-font-size, 18px);
+      line-height: 1.42;
+    }
+
+    .story-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .chapter-heading {
+      max-width: 100%;
+      margin: 0 0 4px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(116, 97, 169, 0.18);
+    }
+
+    .chapter-kicker {
+      margin: 0 0 4px;
+      color: var(--lavender);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .chapter-heading h2 {
+      margin: 0;
+      color: #2b3740;
+      font-size: clamp(22px, 2.6vw, 34px);
+      line-height: 1.05;
+      overflow-wrap: break-word;
+    }
+
+    .toc-page {
+      grid-row: 1 / -1;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .back-cover-page {
+      background:
+        radial-gradient(circle at 50% 14%, rgba(116, 97, 169, 0.12), transparent 44%),
+        linear-gradient(180deg, rgba(255, 250, 240, 0.96), rgba(239, 227, 204, 0.72));
+    }
+
+    .back-cover-content {
+      grid-row: 1 / -1;
+      min-height: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: clamp(26px, 4vw, 54px);
+      text-align: center;
+    }
+
+    .back-cover-content h2 {
+      max-width: 11em;
+      margin: 0;
+      color: var(--lavender);
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.02;
+      overflow-wrap: break-word;
+    }
+
+    .back-cover-content .front-copy {
+      max-width: 42ch;
+      color: #3b454d;
+    }
+
+    .back-cover-content .front-copy p {
+      margin: 0 0 12px;
+    }
+
+    .back-cover-content .front-copy p:last-child {
+      margin-bottom: 0;
+    }
+
+    .cover-page {
+      border: 2px solid rgba(116, 97, 169, 0.28);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 250, 240, 0)),
+        radial-gradient(circle at 50% 10%, rgba(116, 97, 169, 0.16), transparent 46%);
+      box-shadow: inset 0 0 0 10px rgba(116, 97, 169, 0.08);
+    }
+
+    .front-kicker {
+      margin: 0;
+      color: var(--lavender);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .cover-page h2 {
+      color: var(--lavender);
+      font-size: 48px;
+    }
+
+    .cover-sheet {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      background: #263945;
+    }
+
+    .cover-sheet-art {
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-sheet-art img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+      transform: scale(1.012);
+    }
+
+    .cover-sheet-art::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(20, 14, 8, 0.05), transparent 44%, rgba(20, 14, 8, 0.58)),
+        linear-gradient(90deg, rgba(20, 14, 8, 0.18), transparent 22%, transparent 78%, rgba(20, 14, 8, 0.2));
+      pointer-events: none;
+    }
+
+    .cover-sheet-title {
+      padding: 22px 26px 26px;
+      color: #fffaf0;
+      background: linear-gradient(135deg, var(--lavender), #3f5c50);
+      border-top: 1px solid rgba(255, 250, 240, 0.18);
+    }
+
+    .cover-sheet-title .front-kicker {
+      margin-bottom: 8px;
+      color: rgba(255, 250, 240, 0.76);
+      text-transform: none;
+    }
+
+    .cover-sheet-title h2 {
+      margin: 0 0 8px;
+      color: #fffaf0;
+      font-size: 42px;
+      line-height: 1.02;
+      overflow-wrap: break-word;
+    }
+
+    .cover-sheet-title p {
+      margin: 0;
+      color: rgba(255, 250, 240, 0.84);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .front-copy {
+      max-width: 30ch;
+      margin: 0;
+      color: var(--muted);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: var(--story-font-size, 17px);
+      line-height: 1.45;
+    }
+
+    .toc-page {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .toc-heading h2 {
+      margin: 0 0 6px;
+      color: var(--lavender);
+      font-size: 34px;
+      line-height: 1.06;
+    }
+
+    .toc-heading p {
+      margin: 0;
+      color: var(--muted);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .toc-list {
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      list-style: none;
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+    }
+
+    .toc-list li {
+      font-size: var(--story-font-size, 16px);
+      line-height: 1.25;
+    }
+
+    .toc-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 12px;
+      padding: 9px 0;
+      color: inherit;
+      border-bottom: 1px solid rgba(116, 97, 169, 0.16);
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 160ms ease, color 160ms ease, padding 160ms ease;
+    }
+
+    .toc-link:hover,
+    .toc-link:focus-visible {
+      padding-left: 8px;
+      padding-right: 8px;
+      color: var(--lavender);
+      background: rgba(116, 97, 169, 0.09);
+      outline: none;
+    }
+
+    .toc-name {
+      min-width: 0;
+      color: #31404a;
+      font-weight: 800;
+      overflow-wrap: break-word;
+      text-decoration: underline;
+      text-decoration-color: rgba(116, 97, 169, 0.35);
+      text-underline-offset: 3px;
+    }
+
+    .toc-page-num {
+      color: var(--lavender);
+      font-weight: 900;
+    }
+
+    .page-num {
+      align-self: end;
+      justify-self: end;
+      min-width: 34px;
+      height: 34px;
+      display: inline-grid;
+      place-items: center;
+      color: #fffaf0;
+      background: var(--lavender);
+      border-radius: 999px;
+      box-shadow: 0 8px 16px rgba(116, 97, 169, 0.24);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .art-page {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      background: #1f2c35;
+    }
+
+    .art-frame {
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .art-frame img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+      transform: scale(1.012);
+    }
+
+    .art-frame::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(20, 14, 8, 0.28), transparent 16%, transparent 86%, rgba(20, 14, 8, 0.14)),
+        linear-gradient(180deg, transparent 66%, rgba(22, 25, 28, 0.34));
+      pointer-events: none;
+    }
+
+    .art-caption {
+      min-height: 84px;
+      padding: 16px 24px 20px;
+      color: #fffaf0;
+      background: linear-gradient(135deg, #263945 0%, #455f50 100%);
+      border-top: 1px solid rgba(255, 250, 240, 0.12);
+    }
+
+    .art-caption h2 {
+      margin: 0 0 6px;
+      font-size: clamp(20px, 2.1vw, 30px);
+      line-height: 1.05;
+      color: #fffaf0;
+    }
+
+    .art-caption p {
+      margin: 0;
+      color: rgba(255, 250, 240, 0.8);
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .blank-page {
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(90deg, rgba(116, 97, 169, 0.04), transparent 28%),
+        var(--paper);
+    }
+
+    .blank-page-inner {
+      width: 100%;
+      height: 100%;
+    }
+
+    .turn-sheet {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 50%;
+      z-index: 10;
+      display: none;
+      transform-style: preserve-3d;
+      pointer-events: none;
+      will-change: transform;
+      filter: drop-shadow(0 18px 24px rgba(39, 50, 58, 0.18));
+    }
+
+    .book.cover-mode .turn-sheet {
+      width: 100%;
+    }
+
+    .book.single-page-mode .turn-sheet {
+      width: 100%;
+    }
+
+    .turn-sheet.active {
+      display: block;
+    }
+
+    .turn-sheet.next {
+      right: 0;
+      transform-origin: left top;
+      animation: flipNext var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.prev {
+      left: 0;
+      transform-origin: right top;
+      animation: flipPrev var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .book.single-page-mode .turn-sheet.next,
+    .book.single-page-mode .turn-sheet.prev {
+      left: 0;
+      right: auto;
+    }
+
+    .turn-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      transform-style: preserve-3d;
+      overflow: hidden;
+      box-shadow: 0 18px 34px rgba(39, 50, 58, 0.28);
+    }
+
+    .turn-face::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .turn-sheet::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: min(34%, 170px);
+      height: min(42%, 230px);
+      z-index: 4;
+      opacity: 0;
+      pointer-events: none;
+      filter: drop-shadow(0 10px 12px rgba(39, 50, 58, 0.18));
+      will-change: transform, opacity;
+    }
+
+    .turn-sheet.next::after {
+      right: 0;
+      border-radius: 0 10px 0 76%;
+      clip-path: polygon(100% 0, 100% 100%, 0 0);
+      background:
+        linear-gradient(135deg, rgba(255, 252, 244, 0.92), rgba(255, 252, 244, 0.28) 34%, rgba(57, 42, 25, 0.28) 62%, transparent 76%),
+        linear-gradient(315deg, rgba(255, 255, 255, 0.5), transparent 44%);
+      transform-origin: 100% 0;
+      animation: cornerCurlNext var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.prev::after {
+      left: 0;
+      border-radius: 10px 0 76% 0;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      background:
+        linear-gradient(225deg, rgba(255, 252, 244, 0.92), rgba(255, 252, 244, 0.28) 34%, rgba(57, 42, 25, 0.28) 62%, transparent 76%),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.5), transparent 44%);
+      transform-origin: 0 0;
+      animation: cornerCurlPrev var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.next .turn-front::after {
+      background:
+        linear-gradient(90deg, rgba(255, 250, 240, 0.08), transparent 24%),
+        linear-gradient(270deg, rgba(29, 21, 12, 0.34), transparent 58%);
+      animation: frontPageShade var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.next .turn-back::after {
+      background:
+        linear-gradient(90deg, rgba(29, 21, 12, 0.26), transparent 46%),
+        linear-gradient(270deg, rgba(255, 250, 240, 0.16), transparent 28%);
+      animation: backPageShade var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.prev .turn-front::after {
+      background:
+        linear-gradient(270deg, rgba(255, 250, 240, 0.08), transparent 24%),
+        linear-gradient(90deg, rgba(29, 21, 12, 0.34), transparent 58%);
+      animation: frontPageShade var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-sheet.prev .turn-back::after {
+      background:
+        linear-gradient(270deg, rgba(29, 21, 12, 0.26), transparent 46%),
+        linear-gradient(90deg, rgba(255, 250, 240, 0.16), transparent 28%);
+      animation: backPageShade var(--turn-duration) var(--turn-ease) forwards;
+    }
+
+    .turn-front {
+      transform: rotateY(0deg);
+    }
+
+    .turn-back {
+      transform: rotateY(180deg);
+    }
+
+    .turn-sheet.next .turn-front,
+    .turn-sheet.next .turn-back {
+      border-radius: 2px 10px 10px 2px;
+    }
+
+    .turn-sheet.prev .turn-front,
+    .turn-sheet.prev .turn-back {
+      border-radius: 10px 2px 2px 10px;
+    }
+
+    .book.single-page-mode .turn-sheet.next .turn-front,
+    .book.single-page-mode .turn-sheet.next .turn-back,
+    .book.single-page-mode .turn-sheet.prev .turn-front,
+    .book.single-page-mode .turn-sheet.prev .turn-back {
+      border-radius: 12px;
+    }
+
+    @keyframes flipNext {
+      0% {
+        transform: rotateY(0deg) rotateZ(0deg) translateX(0) translateY(0) translateZ(0) scaleX(1);
+        box-shadow: none;
+      }
+      12% {
+        transform: rotateY(-24deg) rotateZ(1.3deg) translateX(-2px) translateY(3px) translateZ(10px) scaleX(0.998);
+        box-shadow: -10px 10px 18px rgba(39, 50, 58, 0.14);
+      }
+      24% {
+        transform: rotateY(-50deg) rotateZ(2deg) translateX(-6px) translateY(8px) translateZ(16px) scaleX(0.99);
+        box-shadow: -14px 16px 26px rgba(39, 50, 58, 0.18);
+      }
+      50% {
+        transform: rotateY(-98deg) rotateZ(2.8deg) translateX(-13px) translateY(15px) translateZ(26px) scaleX(0.968);
+        box-shadow: -30px 24px 42px rgba(39, 50, 58, 0.32);
+      }
+      76% {
+        transform: rotateY(-150deg) rotateZ(1.2deg) translateX(-6px) translateY(9px) translateZ(12px) scaleX(0.99);
+        box-shadow: -12px 16px 26px rgba(39, 50, 58, 0.16);
+      }
+      100% {
+        transform: rotateY(-180deg) rotateZ(0deg) translateX(0) translateY(0) translateZ(0) scaleX(1);
+        box-shadow: none;
+      }
+    }
+
+    @keyframes flipPrev {
+      0% {
+        transform: rotateY(0deg) rotateZ(0deg) translateX(0) translateY(0) translateZ(0) scaleX(1);
+        box-shadow: none;
+      }
+      12% {
+        transform: rotateY(24deg) rotateZ(-1.3deg) translateX(2px) translateY(3px) translateZ(10px) scaleX(0.998);
+        box-shadow: 10px 10px 18px rgba(39, 50, 58, 0.14);
+      }
+      24% {
+        transform: rotateY(50deg) rotateZ(-2deg) translateX(6px) translateY(8px) translateZ(16px) scaleX(0.99);
+        box-shadow: 14px 16px 26px rgba(39, 50, 58, 0.18);
+      }
+      50% {
+        transform: rotateY(98deg) rotateZ(-2.8deg) translateX(13px) translateY(15px) translateZ(26px) scaleX(0.968);
+        box-shadow: 30px 24px 42px rgba(39, 50, 58, 0.32);
+      }
+      76% {
+        transform: rotateY(150deg) rotateZ(-1.2deg) translateX(6px) translateY(9px) translateZ(12px) scaleX(0.99);
+        box-shadow: 12px 16px 26px rgba(39, 50, 58, 0.16);
+      }
+      100% {
+        transform: rotateY(180deg) rotateZ(0deg) translateX(0) translateY(0) translateZ(0) scaleX(1);
+        box-shadow: none;
+      }
+    }
+
+    @keyframes cornerCurlNext {
+      0% {
+        opacity: 0.95;
+        transform: translate(0, 0) scale(0.52) skewY(-8deg);
+      }
+      28% {
+        opacity: 0.9;
+        transform: translate(-18px, 34px) scale(0.86) skewY(-11deg);
+      }
+      62% {
+        opacity: 0.5;
+        transform: translate(-44px, 104px) scale(1.08) skewY(-5deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-70px, 164px) scale(0.72) skewY(0deg);
+      }
+    }
+
+    @keyframes cornerCurlPrev {
+      0% {
+        opacity: 0.95;
+        transform: translate(0, 0) scale(0.52) skewY(8deg);
+      }
+      28% {
+        opacity: 0.9;
+        transform: translate(18px, 34px) scale(0.86) skewY(11deg);
+      }
+      62% {
+        opacity: 0.5;
+        transform: translate(44px, 104px) scale(1.08) skewY(5deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(70px, 164px) scale(0.72) skewY(0deg);
+      }
+    }
+
+    @keyframes bookCornerCurlNext {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.32) rotate(-2deg) skewY(-8deg);
+      }
+      24% {
+        opacity: 0.98;
+        transform: translate(-20px, 34px) scale(0.78) rotate(-5deg) skewY(-10deg);
+      }
+      58% {
+        opacity: 0.82;
+        transform: translate(-50px, 104px) scale(1.12) rotate(-2deg) skewY(-4deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-86px, 208px) scale(0.78) rotate(0deg) skewY(0deg);
+      }
+    }
+
+    @keyframes bookCornerCurlPrev {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.32) rotate(2deg) skewY(8deg);
+      }
+      24% {
+        opacity: 0.98;
+        transform: translate(20px, 34px) scale(0.78) rotate(5deg) skewY(10deg);
+      }
+      58% {
+        opacity: 0.82;
+        transform: translate(50px, 104px) scale(1.12) rotate(2deg) skewY(4deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(86px, 208px) scale(0.78) rotate(0deg) skewY(0deg);
+      }
+    }
+
+    @keyframes frontPageShade {
+      0% {
+        opacity: 0.08;
+      }
+      50% {
+        opacity: 0.4;
+      }
+      72% {
+        opacity: 0.26;
+      }
+      100% {
+        opacity: 0.12;
+      }
+    }
+
+    @keyframes backPageShade {
+      0% {
+        opacity: 0.2;
+      }
+      50% {
+        opacity: 0.38;
+      }
+      72% {
+        opacity: 0.2;
+      }
+      100% {
+        opacity: 0.05;
+      }
+    }
+
+    .footerbar {
+      justify-content: center;
+    }
+
+    .progress-track {
+      width: min(520px, 80vw);
+      height: 8px;
+      background: rgba(255, 250, 240, 0.62);
+      border: 1px solid rgba(39, 50, 58, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--lavender), var(--leaf));
+      border-radius: inherit;
+      transition: width 220ms ease;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .print-book {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.45in;
+      }
+
+      html,
+      body {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        background: #ffffff;
+      }
+
+      body {
+        color: var(--ink);
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .app {
+        display: none !important;
+      }
+
+      .print-book {
+        display: block;
+        background: #ffffff;
+      }
+
+      .print-page {
+        width: 100%;
+        height: 9.85in;
+        margin: 0;
+        break-after: page;
+        page-break-after: always;
+        overflow: hidden;
+        color: var(--ink);
+        background: var(--paper);
+        border: 1px solid rgba(73, 50, 30, 0.18);
+        box-shadow: none;
+        filter: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .print-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .print-page.story-page {
+        padding: 0.45in 0.52in 0.36in;
+        gap: 0.16in;
+      }
+
+      .print-page .story-content {
+        overflow: visible;
+      }
+
+      .print-page .story-content p {
+        font-size: 12.5pt;
+        line-height: 1.34;
+        margin-bottom: 0.1in;
+      }
+
+      .print-page .chapter-heading {
+        margin-bottom: 0;
+        padding-bottom: 0.12in;
+      }
+
+      .print-page .chapter-kicker {
+        font-size: 8.5pt;
+      }
+
+      .print-page .chapter-heading h2 {
+        font-size: 23pt;
+        line-height: 1.08;
+      }
+
+      .print-page .page-num {
+        width: 0.34in;
+        height: 0.34in;
+        min-width: 0.34in;
+        color: #fffaf0;
+        font-size: 9pt;
+      }
+
+      .print-page .toc-page {
+        height: 100%;
+        overflow: visible;
+      }
+
+      .print-page .toc-heading h2 {
+        font-size: 24pt;
+      }
+
+      .print-page .toc-heading p,
+      .print-page .toc-list li {
+        font-size: 11pt;
+      }
+
+      .print-page .toc-link {
+        padding: 0.08in 0;
+        text-decoration: none;
+      }
+
+      .print-page.cover-surface,
+      .print-page.art-page {
+        display: grid;
+        padding: 0;
+        border-color: rgba(31, 44, 53, 0.22);
+      }
+
+      .print-page .cover-sheet,
+      .print-page .cover-sheet-art,
+      .print-page .art-frame {
+        height: 100%;
+      }
+
+      .print-page .cover-sheet-title {
+        padding: 0.24in 0.3in 0.3in;
+      }
+
+      .print-page .cover-sheet-title h2 {
+        font-size: 30pt;
+      }
+
+      .print-page .cover-sheet-title p,
+      .print-page .art-caption p {
+        font-size: 11pt;
+      }
+
+      .print-page .art-caption {
+        min-height: 0;
+        padding: 0.18in 0.28in 0.22in;
+      }
+
+      .print-page .art-caption h2 {
+        font-size: 22pt;
+      }
+
+      .print-page.back-cover-page {
+        padding: 0.55in;
+      }
+
+      .print-page .back-cover-content {
+        padding: 0;
+      }
+
+      .print-page .back-cover-content h2 {
+        font-size: 31pt;
+      }
+
+      .print-page .front-copy {
+        max-width: 43ch;
+        font-size: 12pt;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        padding: 10px;
+        gap: 8px;
+      }
+
+      .topbar,
+      .footerbar {
+        gap: 10px;
+      }
+
+      .book {
+        width: calc(100vw - 20px);
+        height: calc(100vh - 168px);
+      }
+
+      .book.cover-mode {
+        width: min(430px, calc(100vw - 20px));
+      }
+
+      .story-page {
+        padding: 18px 16px;
+        gap: 9px;
+      }
+
+      .story-content p {
+        line-height: 1.36;
+      }
+
+      .cover-page h2 {
+        font-size: 32px;
+      }
+
+      .cover-sheet-title {
+        padding: 18px 20px 22px;
+      }
+
+      .cover-sheet-title h2 {
+        font-size: 30px;
+      }
+
+      .cover-sheet-title p {
+        font-size: 13px;
+      }
+
+      .front-copy {
+        font-size: var(--story-font-size, 13px);
+        line-height: 1.34;
+      }
+
+      .toc-page {
+        gap: 10px;
+      }
+
+      .toc-heading h2 {
+        font-size: 25px;
+      }
+
+      .toc-heading p {
+        font-size: 12px;
+      }
+
+      .toc-link {
+        padding: 6px 0;
+        gap: 8px;
+        line-height: 1.18;
+      }
+
+      .art-caption {
+        min-height: 74px;
+        padding: 13px 16px 15px;
+      }
+
+      .art-caption h2 {
+        font-size: 19px;
+      }
+
+      .art-caption p {
+        font-size: 12px;
+      }
+
+      .icon-button {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        padding: 10px 12px 12px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .title-block h1 {
+        font-size: 18px;
+        line-height: 1.08;
+      }
+
+      .controls {
+        gap: 6px;
+      }
+
+      .seriesbar {
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .series-switcher {
+        flex: 0 0 auto;
+      }
+
+      .series-link,
+      .series-current {
+        min-width: 88px;
+        height: 34px;
+        padding: 0 13px;
+        font-size: 13px;
+      }
+
+      .series-current::after {
+        display: none;
+      }
+
+      .icon-button {
+        width: 36px;
+        height: 36px;
+      }
+
+      .icon-button svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .book-link-button {
+        min-width: 64px;
+        height: 36px;
+        padding: 0 11px;
+        font-size: 12px;
+      }
+
+      .book-link-button svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .book,
+      .book.cover-mode,
+      .book.single-page-mode {
+        width: min(430px, calc(100vw - 24px));
+        height: calc(100vh - 164px);
+        height: calc(100svh - 164px);
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .story-page {
+        padding: 20px 18px;
+      }
+
+      .toc-heading h2 {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>Mist, Pearl, and Snowdrop</h1>
+        <p class="spread-label" id="spread-label"></p>
+      </div>
+      <div class="controls" aria-label="Book controls">
+        <button class="icon-button" type="button" id="prev" aria-label="Previous page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/><path d="M20 12H9"/></svg>
+        </button>
+        <button class="icon-button" type="button" id="next" aria-label="Next page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/><path d="M4 12h11"/></svg>
+        </button>
+        <button class="icon-button" type="button" id="print" aria-label="Download or print formatted book" title="Download or print">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/><path d="M8 17h8"/></svg>
+        </button>
+        <a class="book-link-button" id="next-book-link" href="https://annie-book-2-poppy-and-three-kittens.vercel.app/" aria-label="Open Poppy and the three kittens" title="Open Poppy and the three kittens"><span>Book 2</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5V5.8a2 2 0 0 1 2.3-2L20 6v14l-13.7-2.2A2 2 0 0 0 4 19.5z"/><path d="M14 10l3 3-3 3"/><path d="M8 13h9"/></svg></a>
+      </div>
+    </header>
+
+    <nav class="seriesbar" aria-label="Book series">
+      <div class="series-switcher">
+        <span class="series-current" aria-current="page">Book 1</span><a class="series-link" id="series-next-book-link" href="https://annie-book-2-poppy-and-three-kittens.vercel.app/" aria-label="Open Poppy and the three kittens">Book 2</a>
+      </div>
+    </nav>
+
+    <main class="stage">
+      <div class="book" id="book" aria-live="polite">
+        <article class="book-page left-page story-page" id="left-page" role="button" tabindex="0" aria-label="Previous page"></article>
+        <article class="book-page right-page art-page" id="right-page" role="button" tabindex="0" aria-label="Next page"></article>
+        <div class="turn-sheet" id="turn-sheet" aria-hidden="true">
+          <div class="turn-face turn-front" id="turn-front"></div>
+          <div class="turn-face turn-back" id="turn-back"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footerbar">
+      <span class="sr-only" id="page-status"></span>
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress"></div></div>
+    </footer>
+  </div>
+  <section class="print-book" id="print-book" aria-label="Printable book"></section>
+
+  <script>
+    const spreads = [{"type":"cover","label":"","right":{"type":"cover","label":"","seriesLabel":"Book One","scene":{"image":"cover-main.png","title":"Mist, Pearl, and Snowdrop","caption":"A cat story about caring for two kittens."}}},{"type":"spread","label":"Table of Contents","left":{"type":"blank","label":""},"right":{"type":"toc","label":"Table of Contents","tocIntro":"Snowdrop's path through the garden.","tocEntries":[{"title":"Chapter One: Dawn in the Lavender Garden","pageNumber":1},{"title":"Chapter Two: Soft Pawsteps","pageNumber":9},{"title":"Chapter Three: Mist and Pearl","pageNumber":17},{"title":"Chapter Four: The Cozy Corner","pageNumber":25},{"title":"Chapter Five: First Kitten Rules","pageNumber":33},{"title":"Chapter Six: Marmalade Hill","pageNumber":41},{"title":"Chapter Seven: Rain in the Lavender","pageNumber":49},{"title":"Chapter Eight: Puddles After Rain","pageNumber":57},{"title":"Chapter Nine: Quiet Beside Pepper","pageNumber":65},{"title":"Chapter Ten: Beyond the Lavender","pageNumber":77},{"title":"Chapter Eleven: Twin Leopard Tails","pageNumber":85},{"title":"Chapter Twelve: Two Months Old","pageNumber":91}]}},{"type":"spread","label":"Chapter One: Dawn in the Lavender Garden","left":{"type":"illustration","label":"Chapter One: Dawn in the Lavender Garden","scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"targetPageNumber":1},"right":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":1,"body":"At dawn, when the sky was pale pink and the grass was still wet with dew, Snowdrop woke up in the warm little cat den at the end of the quiet lane.\n\nThe den was tucked behind a row of lavender bushes, under a sloping shed roof, beside a garden where bees slept in flowers and beetles marched like tiny soldiers.\n\nSnowdrop stretched one white paw, then the other. Her fur was soft as a cloud, her steps were quiet as falling snow, and her eyes were bright, bright blue."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":true}},{"type":"spread","label":"Chapter One: Dawn in the Lavender Garden","left":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":2,"body":"Snowdrop's blue eyes were famous among the cats of the lane.\n\nWhen she looked at puddles, they seemed to sparkle. When she looked through tall grass, she could spot the smallest beetle, the sleepiest moth, and the sneakiest shadow.\n\n\"Snowdrop sees everything,\" Marmalade liked to say.\n\nThat was not exactly true. Snowdrop sometimes missed a rolling acorn. Sometimes she stepped on her own tail. Once, she tried to pounce on a leaf and landed nose-first in a flowerpot.\n\nBut Snowdrop noticed little things.\n\nAnd little things often became big adventures."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false},"right":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":3,"body":"The den had three blankets, one round window, one water bowl, and one very squeaky floorboard near the door.\n\nSnowdrop knew the squeaky board well. If she stepped on the left side, it said eeek. If she stepped on the right side, it said eek-eek.\n\nThis morning, she stepped over it.\n\nOutside, lavender nodded in the soft air. The garden smelled sweet and dusty. A blackbird hopped along the wall, pretending not to look for crumbs."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false}},{"type":"spread","label":"Chapter One: Dawn in the Lavender Garden","left":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":4,"body":"Snowdrop washed one ear, then the other.\n\nShe liked to begin the day neatly. A neat ear helped a cat listen. A neat whisker helped a cat think. A neat tail helped a cat look calm even when a beetle marched over her paw.\n\nThe beetle marched over her paw.\n\nSnowdrop lifted her foot and waited.\n\n\"Excuse me,\" she said.\n\nThe beetle did not answer. It had places to go."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false},"right":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":5,"body":"Marmalade arrived exactly when the sun reached the warm stone.\n\nMarmalade was orange, round, cheerful, and almost always hungry. He had a habit of arriving whenever something interesting might happen, especially if breakfast might happen too.\n\n\"Good morning,\" he said. \"Are you having an adventure yet?\"\n\n\"Not yet,\" said Snowdrop.\n\n\"Could you hurry?\" asked Marmalade. \"I am free until breakfast.\"\n\n\"Adventures do not usually come when called,\" said Snowdrop.\n\nMarmalade sat down. \"I can wait loudly.\""},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false}},{"type":"spread","label":"Chapter One: Dawn in the Lavender Garden","left":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":6,"body":"Pepper slipped through the gap under the fence like a shadow with whiskers.\n\nPepper was black from nose to tail, except for one white front paw that looked as if he had stepped in cream.\n\n\"You are both too loud,\" Pepper said.\n\n\"I have only said eight things,\" Marmalade objected.\n\n\"That is seven things too many before breakfast.\"\n\nSnowdrop blinked her blue eyes.\n\nPoppy came after Pepper, bright calico patches flashing in the sun. Clover followed last, carrying a long dry leaf in her mouth like a prize."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false},"right":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":7,"body":"\"What is that?\" asked Poppy.\n\nClover dropped the leaf proudly. \"A leopard tail.\"\n\nPepper sniffed it. \"It is a leaf.\"\n\n\"A leaf can be a leopard tail if you carry it correctly,\" said Clover.\n\n\"I see it,\" said Snowdrop. \"It curves just like one.\"\n\n\"It is still a leaf,\" said Pepper.\n\n\"A very leafy leaf,\" said Poppy.\n\nClover picked it up again and marched around the flowerpots with her chin high."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false}},{"type":"spread","label":"Chapter One: Dawn in the Lavender Garden","left":{"type":"story","label":"Chapter One: Dawn in the Lavender Garden","page":{"number":8,"body":"The cats spent the morning making the garden into a kingdom.\n\nThe flowerpots became towers. The old watering can became a cave. The garden wall became a mountain. The lavender bushes became a purple forest full of invisible mice.\n\nInvisible mice were difficult to catch because nobody could agree where they were.\n\nMarmalade declared himself king of the sunny stone.\n\nPoppy declared herself queen of the fence.\n\nClover declared herself captain of the leopard-tail leaf.\n\nPepper declared that everyone was being too loud."},"chapter":{"label":"Chapter One","title":"Dawn in the Lavender Garden","startPage":1,"scene":{"image":"cover-dawn.png","title":"Dawn in the Lavender Garden","caption":"Snowdrop wakes beside the lavender garden."},"displayTitle":"Chapter One: Dawn in the Lavender Garden"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Two: Soft Pawsteps","left":{"type":"illustration","label":"Chapter Two: Soft Pawsteps","scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"targetPageNumber":9},"right":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":9,"body":"Snowdrop declared nothing at all.\n\nShe watched the sky brighten from dawn to morning. She listened to the bees hum awake. She saw a trail of ants carrying a crumb around a pebble and wondered why they did not simply climb over it.\n\nThe garden was ordinary.\n\nThe garden was also full of tiny happenings.\n\nSnowdrop liked that best. A cat did not need a roaring river or a giant mountain to have an adventure.\n\nSometimes a leaf was enough."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":true}},{"type":"spread","label":"Chapter Two: Soft Pawsteps","left":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":10,"body":"By noon, the warmest patch of sunlight had moved beside the cat den. The morning dew was gone, the stones were warm, and the garden smelled like sun, grass, and lavender.\n\nThe cats began a game called Pounce on the Shadow Without Pouncing on Your Friend, which was much harder than it sounded.\n\nMarmalade pounced on Pepper's shadow.\n\nPepper pounced on Poppy's shadow.\n\nPoppy pounced on Clover's leopard-tail leaf.\n\nClover shouted, \"My leopard tail!\"\n\nSnowdrop was about to pounce when she heard soft pawsteps behind the lavender."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false},"right":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":11,"body":"The pawsteps stopped.\n\nSnowdrop lifted her head.\n\n\"Did anyone else hear that?\" she asked.\n\nMarmalade froze with one paw still on Pepper's shadow. Poppy climbed down from the fence. Clover tucked her leaf under one paw.\n\nPepper listened.\n\nThe lavender branches trembled, though there was no wind.\n\n\"Someone is there,\" Pepper said.\n\nSnowdrop walked toward the bushes. She did not rush. Rushing made little creatures hide, and it made tired cats more tired."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false}},{"type":"spread","label":"Chapter Two: Soft Pawsteps","left":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":12,"body":"\"Hello?\" Snowdrop called softly.\n\nThe lavender smelled stronger where the branches had been brushed aside. A few purple flowers fell onto the path.\n\nFor a moment, no one answered.\n\nThen a pale face appeared between the stems.\n\nSnowdrop knew that face. She knew the calm whiskers, the gentle paws, and the faint silvery shading on the ears.\n\n\"Frost?\" she said.\n\nFrost stepped into the garden, and the whole game stopped."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false},"right":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":13,"body":"Frost was Snowdrop's sister.\n\nShe was pale white, like moonlight on snow, with a quieter, older look. Usually Frost moved as if she had all the time in the world.\n\nToday she looked tired.\n\nHer fur was smooth, but her steps were slow. Her eyes were kind, but they kept glancing down beside her paws.\n\nSnowdrop followed Frost's gaze.\n\nBeside Frost were two very small kittens."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false}},{"type":"spread","label":"Chapter Two: Soft Pawsteps","left":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":14,"body":"One kitten was gray and white with round amber eyes. He had a gray patch over one ear, soft gray tabby markings over his head and back, and a white chin that made him look surprised.\n\nThe other kitten was white with green eyes, a pink nose, and paws that seemed too big for her body.\n\nThey were only three weeks old.\n\nThe gray and white kitten leaned against Frost's front leg.\n\nThe white kitten tried to sit down and accidentally rolled onto her side."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false},"right":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":15,"body":"Marmalade whispered, \"They are very small.\"\n\n\"I can hear whispers,\" said Pepper.\n\n\"I know,\" Marmalade whispered back.\n\nPoppy's eyes went soft. Clover forgot her leopard-tail leaf completely.\n\nSnowdrop did not move closer yet. The kittens were staring at everything: the lavender, the flowerpots, Marmalade's orange belly, Pepper's white paw, and Snowdrop's bright blue eyes.\n\nThe white kitten blinked at Snowdrop.\n\n\"Blue,\" she squeaked."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false}},{"type":"spread","label":"Chapter Two: Soft Pawsteps","left":{"type":"story","label":"Chapter Two: Soft Pawsteps","page":{"number":16,"body":"\"Yes,\" said Snowdrop. \"Blue.\"\n\nThe gray and white kitten made a tiny sound too, though it was difficult to tell whether he meant blue, hello, or I have a foot.\n\nFrost lowered herself carefully onto the warm stone.\n\n\"Snowdrop,\" she said softly, \"I need your help.\"\n\nSnowdrop stepped closer then.\n\nFrost did not often ask for help. She gave directions. She found lost paths. She knew which roofs were safe and which dogs barked only at clouds.\n\nIf Frost asked, it mattered."},"chapter":{"label":"Chapter Two","title":"Soft Pawsteps","startPage":9,"scene":{"image":"leopard-tail.png","title":"Soft Pawsteps","caption":"The garden goes quiet when Snowdrop hears someone in the lavender."},"displayTitle":"Chapter Two: Soft Pawsteps"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Three: Mist and Pearl","left":{"type":"illustration","label":"Chapter Three: Mist and Pearl","scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"targetPageNumber":17},"right":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":17,"body":"Frost touched the gray and white kitten with her nose.\n\n\"This is Mist,\" she said. \"He climbs before he checks how high things are.\"\n\nMist squeaked, as if this was an important thing to say.\n\nFrost touched the white kitten next.\n\n\"And this is Pearl. She asks many questions, but she forgets where her paws are.\"\n\nPearl waved one paw in the air and blinked her green eyes at Snowdrop.\n\n\"Paw,\" Pearl said.\n\n\"That is yours,\" said Snowdrop."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":true}},{"type":"spread","label":"Chapter Three: Mist and Pearl","left":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":18,"body":"Clover leaned toward Poppy. \"Can kittens borrow leopard tails?\"\n\n\"Not yet,\" Poppy whispered.\n\nMarmalade leaned toward Pepper. \"Can kittens eat breakfast?\"\n\n\"Not yours,\" Pepper said.\n\nMist tried to climb Frost's front leg and slid back down. Pearl spotted Clover's leaf and began wobbling toward it.\n\nSnowdrop stepped between Pearl and the leaf.\n\n\"Hello, Pearl,\" she said.\n\nPearl sat down suddenly, surprised by the floor."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false},"right":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":19,"body":"Frost took a slow breath.\n\n\"I need you to take care of them until they are two months old,\" she said.\n\nThe garden went quiet.\n\nSnowdrop looked at Mist. She looked at Pearl. Then she looked at Frost.\n\nTaking care of kittens sounded simple until she actually saw the kittens. Mist was already trying to climb a pebble. Pearl was trying to nibble the end of Clover's leaf.\n\nEven a dandelion looked tall beside them."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false}},{"type":"spread","label":"Chapter Three: Mist and Pearl","left":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":20,"body":"\"They need warmth,\" Frost said. \"They need soft voices. They need help finding safe places to walk. They need someone to keep them from tumbling into trouble.\"\n\n\"For five whole weeks?\" asked Marmalade.\n\n\"Until they are two months old,\" said Frost.\n\nPepper looked at Mist, who had put one paw on the pebble and was considering the rest of the climb.\n\n\"That is a lot of tumbling,\" Pepper said.\n\nSnowdrop stood a little taller.\n\n\"I can do that,\" she said."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false},"right":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":21,"body":"Frost nuzzled Snowdrop's cheek.\n\n\"I know you can. And I will visit when I can.\"\n\nThen Frost turned to the kittens. \"Mist, Pearl, stay close to Snowdrop. Listen to her. She has very good eyes.\"\n\nMist stared at Snowdrop's blue eyes.\n\nPearl stared too.\n\n\"Blue,\" Pearl said again.\n\n\"Still blue,\" said Snowdrop.\n\nMarmalade smiled. \"I think they like her.\"\n\n\"Everyone likes Snowdrop,\" said Pepper.\n\n\"I like breakfast,\" said Marmalade."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false}},{"type":"spread","label":"Chapter Three: Mist and Pearl","left":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":22,"body":"Frost rested for a little while before she had to go.\n\nSnowdrop brought her water. Poppy found a clean patch of shade. Clover placed the leopard-tail leaf nearby in case it was useful.\n\nMist curled against Frost's paw.\n\nPearl curled against Mist, then uncurled to look at Snowdrop.\n\nFrost watched Snowdrop watching them.\n\n\"They are little,\" Frost said.\n\n\"I can see that,\" said Snowdrop.\n\n\"They will not stay little.\"\n\nSnowdrop nodded, though the kittens looked as if they might stay tiny forever."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false},"right":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":23,"body":"When Frost stood, Mist woke at once.\n\nPearl woke because Mist bumped her nose.\n\nFrost bent and touched each kitten gently. \"I will come back,\" she told them.\n\nMist squeaked.\n\nPearl pressed her pink nose against Frost's chin.\n\nSnowdrop felt something settle inside her. It was not fear exactly. It was more like holding a bowl of water and trying not to spill any.\n\nFrost stepped through the lavender and disappeared down the lane."},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false}},{"type":"spread","label":"Chapter Three: Mist and Pearl","left":{"type":"story","label":"Chapter Three: Mist and Pearl","page":{"number":24,"body":"For one breath, no one moved.\n\nThen Pearl began to follow Frost.\n\nSnowdrop stepped in front of her.\n\n\"Not that way,\" Snowdrop said. \"This way.\"\n\nPearl looked left. She looked right. She looked at Snowdrop's paws.\n\n\"Why?\"\n\n\"Because Frost is coming back later, and you are staying here now.\"\n\nPearl considered this.\n\nMist considered the pebble again.\n\nMarmalade whispered, \"This adventure came when called after all.\""},"chapter":{"label":"Chapter Three","title":"Mist and Pearl","startPage":17,"scene":{"image":"frost-arrival.png","title":"Mist and Pearl","caption":"Frost brings Mist and Pearl to Snowdrop."},"displayTitle":"Chapter Three: Mist and Pearl"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Four: The Cozy Corner","left":{"type":"illustration","label":"Chapter Four: The Cozy Corner","scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"targetPageNumber":25},"right":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":25,"body":"Snowdrop led Mist and Pearl toward the cat den.\n\nShe walked slowly. Mist took three tiny steps for every one of hers. Pearl took two tiny steps, then one sideways step, then stopped to stare at a seed.\n\n\"Seed,\" Pearl said.\n\n\"Yes,\" said Snowdrop. \"Seed.\"\n\n\"Why?\"\n\n\"Because plants come from seeds.\"\n\nPearl stared harder.\n\nMist bumped into Snowdrop's back paw and sat down with a surprised squeak.\n\n\"We will learn walking first,\" Snowdrop said."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":true}},{"type":"spread","label":"Chapter Four: The Cozy Corner","left":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":26,"body":"The den was quieter than the garden and warm from the noon sun.\n\nDust floated in the light from the round window. The three blankets waited in a soft heap. Outside, the other cats peeked in without crowding the doorway.\n\n\"This is the cozy corner,\" Snowdrop told the kittens. \"Good for naps.\"\n\nMist stepped onto the blanket and sank down so far that only his ears showed.\n\nPearl waddled in a circle, then sat on Mist.\n\nMist squeaked.\n\nPearl squeaked back."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false},"right":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":27,"body":"Snowdrop gently nudged Pearl to the side.\n\n\"First kitten rule,\" she said. \"Do not sit on your brother unless he asks.\"\n\nPearl looked at Mist.\n\n\"Ask?\" she said.\n\nMist blinked from the blanket valley.\n\n\"No,\" he squeaked.\n\nPearl nodded, very serious. Then she sat on the blanket beside him and immediately tipped over.\n\nMarmalade stuck his head through the doorway.\n\n\"I can be a blanket,\" he offered.\n\n\"You can be quiet,\" said Pepper from outside."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false}},{"type":"spread","label":"Chapter Four: The Cozy Corner","left":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":28,"body":"The kittens did not nap.\n\nThey blinked. They wobbled. They sneezed. They tried to chase Snowdrop's tail even though Snowdrop moved it slowly and kindly for them.\n\nMist crawled under the blanket and became a mysterious blanket hill.\n\nPearl patted the hill.\n\n\"Mist?\"\n\nThe hill squeaked.\n\nSnowdrop lifted one blanket corner.\n\nMist looked pleased with himself.\n\n\"A hiding place is good,\" Snowdrop said. \"A hiding place where you can still breathe is better.\""},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false},"right":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":29,"body":"Pearl found the water bowl.\n\nShe looked into it and seemed shocked to find another white kitten staring back.\n\n\"That kitten copies me,\" Pearl squeaked.\n\n\"That is your reflection,\" said Snowdrop.\n\nPearl touched the water with one paw. The reflection wiggled.\n\nPearl gasped. \"Why does water make another kitten?\"\n\n\"It does not make one,\" Snowdrop said. \"It shows you one.\"\n\nPearl leaned close.\n\nThe other kitten leaned close too."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false}},{"type":"spread","label":"Chapter Four: The Cozy Corner","left":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":30,"body":"Mist crawled out from under the blanket and looked into the bowl.\n\n\"Friend?\" he asked.\n\n\"Reflection,\" said Snowdrop again.\n\nMist touched the water. The gray and white kitten in the bowl broke into silver ripples.\n\nMist pulled back his wet paw and stared.\n\nPearl stared too.\n\nThen both kittens looked at Snowdrop as if she had put magic in the bowl.\n\nSnowdrop smiled. Pearl had found her first mystery, and Mist had splashed it."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false},"right":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":31,"body":"Outside, Clover was trying to repair a bent corner of the leopard-tail leaf.\n\nPoppy was telling her it still looked grand.\n\nPepper was pretending not to watch the doorway.\n\nMarmalade was lying in the sun, but one ear pointed toward the den.\n\nSnowdrop noticed all of them waiting.\n\nThe kittens were not only hers to watch. The whole garden had grown careful around them without anyone saying so.\n\nThat made Snowdrop feel less alone."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false}},{"type":"spread","label":"Chapter Four: The Cozy Corner","left":{"type":"story","label":"Chapter Four: The Cozy Corner","page":{"number":32,"body":"Snowdrop brought Mist and Pearl back outside for fresh air.\n\nShe chose the safest part of the garden, where the grass was short, the stones were flat, and the lavender bushes made a shady wall.\n\n\"Stay close to my side and the flowerpot,\" Snowdrop said.\n\nMist nodded.\n\nPearl nodded.\n\nThen Mist marched toward a beetle.\n\nPearl marched toward a daisy.\n\nThey went in opposite directions.\n\nSnowdrop hurried after Mist, then hurried after Pearl."},"chapter":{"label":"Chapter Four","title":"The Cozy Corner","startPage":25,"scene":{"image":"cozy-den.png","title":"The Cozy Corner","caption":"Mist and Pearl discover blankets, reflections, and Snowdrop's patience."},"displayTitle":"Chapter Four: The Cozy Corner"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Five: First Kitten Rules","left":{"type":"illustration","label":"Chapter Five: First Kitten Rules","scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"targetPageNumber":33},"right":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":33,"body":"\"Second kitten rule,\" Snowdrop said, catching her breath. \"Adventure is better when everyone goes the same way.\"\n\nMist looked at Pearl.\n\nPearl looked at Mist.\n\nThen they both looked in different directions again.\n\nMarmalade rolled onto his side. \"This rule may need practice.\"\n\n\"Most rules do,\" said Pepper.\n\nSnowdrop nudged Mist away from the beetle with her nose, then nudged Pearl away from a sleepy bee.\n\nThe bee floated past them, heavy with pollen and not interested in kittens at all."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":true}},{"type":"spread","label":"Chapter Five: First Kitten Rules","left":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":34,"body":"By afternoon, Mist and Pearl had learned the short path from the den to the lavender and back again.\n\nThey had also learned that Clover's leaf was not for chewing, Pepper's tail was not a toy, Poppy's fence was too high, and Marmalade's belly made an excellent pillow if he agreed first.\n\nSnowdrop counted the lessons in her head.\n\nThen she counted the kittens.\n\nOne gray and white.\n\nOne white.\n\nBoth safe.\n\nFor the first day, that was enough."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false},"right":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":35,"body":"The next morning began with a sneeze.\n\nMist sneezed first.\n\nPearl sneezed because Mist had sneezed.\n\nMarmalade woke outside the doorway and said, \"Bless you, breakfast.\"\n\n\"We are not breakfast,\" said Pearl.\n\n\"I was speaking to breakfast in general,\" said Marmalade.\n\nSnowdrop gave each kitten a gentle lick between the ears. Their fur smelled like blankets, milk, and lavender dust.\n\n\"Today,\" she said, \"we learn the den.\"\n\nPearl looked around. \"Why?\"\n\n\"Because it is home for now.\""},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false}},{"type":"spread","label":"Chapter Five: First Kitten Rules","left":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":36,"body":"The den had corners.\n\nThat was the first discovery.\n\nMist found the blanket corner, the water bowl corner, and the dusty corner behind the old basket.\n\nPearl found the round-window corner, even though a round window did not truly have corners.\n\n\"This corner has sky,\" Pearl said.\n\n\"That is a window,\" said Snowdrop.\n\n\"Why?\"\n\n\"So light can come in.\"\n\nPearl blinked at the bright circle.\n\nMist tried to climb the basket and slid backward into the blanket."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false},"right":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":37,"body":"Snowdrop showed them the squeaky floorboard.\n\n\"Step here,\" she said.\n\nMist stepped.\n\nEeek.\n\nPearl jumped.\n\nThen Pearl stepped.\n\nEek-eek.\n\nMist jumped.\n\nThey stared at the board.\n\n\"Again?\" asked Pearl.\n\n\"Only once more,\" said Snowdrop.\n\nThey stepped together.\n\nEeeeeek-eek.\n\nMarmalade called from outside, \"The floor is singing!\"\n\n\"The floor is complaining,\" Pepper said."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false}},{"type":"spread","label":"Chapter Five: First Kitten Rules","left":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":38,"body":"When the kittens grew tired of the floorboard, Snowdrop showed them where the blankets folded.\n\n\"A blanket can be a nest,\" she said.\n\n\"Or a hill,\" Mist said.\n\n\"Or a cave,\" said Pearl.\n\n\"Yes,\" Snowdrop said. \"But if it becomes a cave, tell me before you vanish inside.\"\n\nPearl nodded. Mist nodded.\n\nThen both kittens vanished inside.\n\nSnowdrop closed her eyes for one moment.\n\n\"Mist?\"\n\nSqueak.\n\n\"Pearl?\"\n\n\"Cave,\" Pearl said proudly."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false},"right":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":39,"body":"Poppy visited at midday with a small feather she had found near the fence.\n\n\"For gentle batting,\" she said.\n\n\"What is gentle?\" asked Pearl.\n\nPoppy placed the feather on the blanket and tapped it with one soft paw.\n\nThe feather spun.\n\nMist pounced so hard he rolled over it and into Pearl.\n\nPearl rolled into the blanket cave.\n\nThe feather floated down onto Snowdrop's nose.\n\nPoppy smiled. \"Gentle may need another try.\"\n\nSnowdrop sneezed."},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false}},{"type":"spread","label":"Chapter Five: First Kitten Rules","left":{"type":"story","label":"Chapter Five: First Kitten Rules","page":{"number":40,"body":"Clover visited with the leopard-tail leaf.\n\n\"They may look,\" Clover said, \"but not bite.\"\n\nPearl looked.\n\nMist looked.\n\nMarmalade looked too.\n\n\"That rule applies to everyone,\" Clover warned.\n\nMarmalade shut his mouth.\n\nClover laid the leaf on the floor. She showed Mist how to walk around it without stepping on the crunchy edges. She showed Pearl how to touch it with one paw and not drag it away.\n\nPearl whispered, \"Leaf.\"\n\nClover whispered back, \"Leopard tail.\""},"chapter":{"label":"Chapter Five","title":"First Kitten Rules","startPage":33,"scene":{"image":"first-kitten-rules.png","title":"First Kitten Rules","caption":"Snowdrop nudges the kittens away from tiny garden trouble."},"displayTitle":"Chapter Five: First Kitten Rules"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Six: Marmalade Hill","left":{"type":"illustration","label":"Chapter Six: Marmalade Hill","scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"targetPageNumber":41},"right":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":41,"body":"Pepper did not visit inside the den right away.\n\nHe sat by the doorway where one white paw rested in the sun.\n\nMist saw the paw.\n\nHe crept toward it.\n\n\"That is attached to Pepper,\" Snowdrop said.\n\nMist stopped.\n\nPepper opened one yellow eye.\n\nMist sat down just inside the doorway and looked at him.\n\nPepper looked back.\n\nNothing happened for a long moment.\n\nThen Pepper curled his white paw closer.\n\nMist copied him with his own paw."},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":true}},{"type":"spread","label":"Chapter Six: Marmalade Hill","left":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":42,"body":"Marmalade offered to help by lying down beside the kittens like a soft orange hill.\n\n\"They can climb me,\" he said. \"I am excellent for climbing.\"\n\nMist began climbing Marmalade's side. Pearl tried to climb his tail.\n\n\"Not the tail,\" said Marmalade quickly. \"The tail is not a mountain.\"\n\nPearl pulled her paw back. \"Sorry,\" she squeaked.\n\nMarmalade blinked in surprise.\n\nSnowdrop leaned close. \"You noticed Marmalade did not like that,\" she said. \"So you stopped and said sorry. That was kind.\""},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false},"right":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":43,"body":"Marmalade liked being a hill more than he expected.\n\nMist climbed to the top of his shoulder and looked around as if he had reached the garden wall.\n\nPearl climbed halfway, forgot what she was doing, and rested her chin on Marmalade's side.\n\n\"I am a mountain and a pillow,\" Marmalade said.\n\n\"You are also blocking the doorway,\" Pepper said.\n\n\"Mountains do that.\"\n\nSnowdrop let the kittens climb only until their paws grew wobbly.\n\nThen she guided them down for a rest."},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false}},{"type":"spread","label":"Chapter Six: Marmalade Hill","left":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":44,"body":"Resting was not the same as sleeping.\n\nMist rested by chewing the edge of a blanket without actually chewing it.\n\nPearl rested by asking why the dust in the sun floated up instead of down.\n\nSnowdrop did not know all the answers.\n\nSometimes she said, \"I do not know.\"\n\nPearl seemed to like that answer too.\n\n\"Why do you not know?\"\n\n\"Because no cat knows everything.\"\n\nPearl looked pleased.\n\n\"Then we can find out later.\""},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false},"right":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":45,"body":"That evening, Frost returned for a short visit.\n\nMist was asleep against Marmalade's front paw. Pearl was awake because she had heard Frost before anyone else did.\n\n\"Mama,\" Pearl squeaked, and tumbled toward the doorway.\n\nFrost bent low and nuzzled her.\n\nMist woke, saw Frost, and tried to run before his back paws were ready.\n\nSnowdrop caught him with one gentle paw.\n\nFrost looked around the den.\n\n\"You made it cozy,\" she said.\n\n\"They made it busy,\" Snowdrop answered."},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false}},{"type":"spread","label":"Chapter Six: Marmalade Hill","left":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":46,"body":"Frost stayed until the sky turned peach.\n\nShe listened while Snowdrop told her about the water bowl reflection, the singing floorboard, Marmalade Hill, and the leopard-tail rule.\n\nPearl interrupted often to say \"why.\"\n\nMist interrupted once to climb Frost's shoulder and then decide he wanted down.\n\nFrost helped him down.\n\n\"Five weeks is a long time,\" Snowdrop said softly.\n\n\"It is,\" said Frost. \"And it is made of little days.\"\n\nSnowdrop looked at the kittens.\n\nThis little day was almost done."},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false},"right":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":47,"body":"After Frost left, the den felt quiet.\n\nPearl pressed against Snowdrop's side.\n\nMist pressed against Pearl.\n\nMarmalade snored outside the doorway. Pepper pretended he was not guarding it. Poppy slept on the fence. Clover slept with the leopard-tail leaf tucked under one paw.\n\nSnowdrop listened to all of them.\n\nThe kittens' breathing was quick and soft.\n\nThe lavender brushed the wall.\n\nThe round window held one silver star.\n\nSnowdrop stayed awake until both kittens were asleep."},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false}},{"type":"spread","label":"Chapter Six: Marmalade Hill","left":{"type":"story","label":"Chapter Six: Marmalade Hill","page":{"number":48,"body":"In the morning, Mist found the squeaky floorboard again.\n\nPearl found the water bowl again.\n\nMarmalade found breakfast.\n\nSnowdrop found that she was tired, but not unhappy.\n\nShe washed each kitten's face. She checked their paws. She counted their whiskers without meaning to.\n\n\"What now?\" asked Pearl.\n\nOutside, a cloud slid over the sun.\n\nThe garden changed color.\n\nSnowdrop looked at the sky.\n\n\"Now,\" she said, \"we watch the weather.\""},"chapter":{"label":"Chapter Six","title":"Marmalade Hill","startPage":41,"scene":{"image":"marmalade-hill.png","title":"Marmalade Hill","caption":"Mist and Pearl learn how to climb Marmalade carefully."},"displayTitle":"Chapter Six: Marmalade Hill"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Seven: Rain in the Lavender","left":{"type":"illustration","label":"Chapter Seven: Rain in the Lavender","scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"targetPageNumber":49},"right":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":49,"body":"Late in the afternoon, clouds gathered over the lane.\n\nThe bright garden turned silvery, and the air smelled like rain.\n\nMist shivered.\n\nPearl blinked up at the darkening sky.\n\n\"Is the sky growling?\" Pearl asked.\n\nA low rumble rolled far away.\n\nMarmalade puffed up. \"The sky is hungry.\"\n\n\"The sky is not hungry,\" said Pepper.\n\n\"Then why is it rumbling?\" asked Clover.\n\nSnowdrop looked at the clouds, then at the kittens.\n\n\"It is going to rain,\" she said. \"We should go inside.\""},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":true}},{"type":"spread","label":"Chapter Seven: Rain in the Lavender","left":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":50,"body":"Before they could reach the den, one fat raindrop landed on Marmalade's nose.\n\n\"Cold!\" he yelped.\n\nAnother raindrop splashed near Mist. Another dotted Pearl's white fur.\n\nThen the rain began to patter on the leaves, the stones, the fence, and the shed roof.\n\nMist looked up with his mouth open.\n\n\"Do not drink the sky,\" Snowdrop said.\n\nMist closed his mouth.\n\nPearl laughed so hard she sat down in the wet grass."},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":51,"body":"The big cats hurried toward the den, but Mist stopped in the grass.\n\nHe had found a puddle.\n\nIn the puddle was a wobbly gray and white kitten with amber eyes.\n\n\"Friend?\" Mist squeaked.\n\n\"Reflection,\" said Snowdrop, lifting him gently away just before he stepped in.\n\nMist looked back over her paw.\n\nThe puddle kitten looked back too.\n\nRain made circles all around its face.\n\nMist whispered, \"Wet friend.\""},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Seven: Rain in the Lavender","left":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":52,"body":"Pearl, meanwhile, had discovered that raindrops made the lavender bushes shake.\n\nEvery time a drop landed, a leaf bounced.\n\nBounce.\n\nBounce.\n\nBounce.\n\nPearl's green eyes grew wide. She patted one leaf, then another, then tried to crawl under the bush to find where the bouncing came from.\n\n\"Pearl,\" called Snowdrop.\n\nPearl did not answer.\n\nSnowdrop's blue eyes searched the lavender shadows.\n\nThere was Pearl, half hidden under the leaves, very proud and very wet."},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":53,"body":"Snowdrop crawled in after Pearl.\n\nLavender brushed Snowdrop's ears. Raindrops slid down her nose.\n\n\"Third kitten rule,\" Snowdrop said gently. \"If a leaf is dancing, you may watch it from somewhere dry.\"\n\nPearl looked at the bouncing leaves.\n\n\"Why?\"\n\n\"Because wet kittens get cold.\"\n\nPearl thought about this. Then she sneezed.\n\n\"Cold,\" she agreed.\n\nSnowdrop guided her out from under the bush and tucked her close against her chest."},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Seven: Rain in the Lavender","left":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":54,"body":"Inside the den, the cats shook rain from their whiskers.\n\nMarmalade shook rain from his ears.\n\nPepper shook rain from his one white paw.\n\nPoppy shook rain from her calico tail.\n\nClover shook rain from the leopard-tail leaf, which had become a soggy leopard-tail leaf.\n\nClover stared at it.\n\n\"It is still grand,\" Poppy said quickly.\n\n\"It is floppy,\" said Clover.\n\n\"A floppy grand thing,\" said Snowdrop.\n\nClover brightened a little."},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":55,"body":"Snowdrop dried Mist and Pearl with the edge of the soft blanket.\n\nMist protested with tiny squeaks until he realized the blanket was warm.\n\nPearl tucked her wet nose under Snowdrop's chin.\n\n\"You smell like rain,\" Pearl whispered.\n\n\"So do you,\" said Snowdrop.\n\nRain tapped the roof in quick little paws.\n\nMist listened.\n\n\"Many paws,\" he said.\n\n\"Drops,\" said Snowdrop.\n\n\"Drop paws,\" said Pearl.\n\nMarmalade yawned. \"I prefer breakfast paws.\""},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Seven: Rain in the Lavender","left":{"type":"story","label":"Chapter Seven: Rain in the Lavender","page":{"number":56,"body":"The rain grew louder.\n\nIt drummed on the shed roof and rushed from the edge in silver strings. The round window blurred until the garden looked like a painting made of water.\n\nPearl watched from the blanket.\n\n\"Where does rain sleep?\" she asked.\n\n\"In clouds, maybe,\" said Poppy.\n\n\"In puddles after it falls,\" said Clover.\n\n\"In my fur,\" Marmalade complained.\n\nPepper sat near the doorway and watched the path.\n\nSnowdrop watched Pepper.\n\nHe did not like storms, though he never said so."},"chapter":{"label":"Chapter Seven","title":"Rain in the Lavender","startPage":49,"scene":{"image":"rainy-garden.png","title":"Rain in the Lavender","caption":"A soft rain turns the garden silver."},"displayTitle":"Chapter Seven: Rain in the Lavender"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Eight: Puddles After Rain","left":{"type":"illustration","label":"Chapter Eight: Puddles After Rain","scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"targetPageNumber":57},"right":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":57,"body":"Another rumble rolled over the lane.\n\nPearl pressed against Mist. Mist pressed against Snowdrop.\n\nMarmalade pressed against everyone.\n\n\"The sky is only making noise,\" Snowdrop said.\n\n\"Loud noise,\" Pearl whispered.\n\n\"Yes.\"\n\nSnowdrop curled her tail around both kittens. She did not tell them there was nothing to feel. She only stayed warm and steady beside them.\n\nThe thunder passed.\n\nThe rain kept tapping.\n\nMist breathed out slowly.\n\nPearl did too."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":true}},{"type":"spread","label":"Chapter Eight: Puddles After Rain","left":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":58,"body":"After a while, the rain softened.\n\nThe tapping became dripping. The dripping became plinking. The plinking became silence with little drops falling from leaves.\n\nSnowdrop led the kittens to the doorway.\n\nThe garden had changed.\n\nEvery stone shone. Every lavender stem sparkled. Puddles held pieces of sky. The air smelled clean, green, and new.\n\nPearl whispered, \"The garden washed itself.\"\n\n\"It did,\" said Snowdrop.\n\nMist looked at his paws.\n\n\"I washed too.\"\n\n\"Very much,\" said Snowdrop."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false},"right":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":59,"body":"The cats stepped outside carefully.\n\nMarmalade avoided puddles by walking in a very wiggly line.\n\nPoppy hopped from stone to stone.\n\nClover carried the soggy leopard-tail leaf like a banner after a long journey.\n\nPepper shook his white paw each time it touched wet grass.\n\nMist and Pearl watched everyone.\n\n\"Careful paws,\" Snowdrop reminded them.\n\nMist lifted one foot high.\n\nPearl lifted one foot higher.\n\nThen both kittens set their paws down in the same puddle.\n\nSplash."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false}},{"type":"spread","label":"Chapter Eight: Puddles After Rain","left":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":60,"body":"The splash surprised them.\n\nIt surprised Marmalade too, because he was close enough to be sprinkled.\n\n\"Tiny storm!\" he cried.\n\nPearl laughed.\n\nMist stared at the puddle, then tapped it again.\n\nSplash.\n\nSnowdrop let them splash twice more. Then their paws began to tremble from the cold.\n\n\"Inside,\" she said.\n\nThis time, the kittens followed without arguing.\n\nThe puddles waited behind them, shining quietly.\n\nThey would still be there tomorrow."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false},"right":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":61,"body":"That night, the den smelled like damp lavender and warm blankets.\n\nMist dreamed with his paws twitching.\n\nPearl dreamed with one ear folded inside out.\n\nSnowdrop sat by the round window and watched the moon appear between ragged clouds.\n\nPepper sat outside under the roof edge.\n\n\"You can come in,\" Snowdrop called.\n\n\"I am already mostly dry,\" Pepper said.\n\nBut after a moment, he came in anyway and sat near the doorway.\n\nMist opened one eye and smiled."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false}},{"type":"spread","label":"Chapter Eight: Puddles After Rain","left":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":62,"body":"In the morning, the puddles were smaller.\n\nPearl checked each one as if the reflected kittens might have moved overnight.\n\nMist checked each one by trying to step into it.\n\nSnowdrop stopped him most of the time.\n\nThe soggy leopard-tail leaf dried in the sun. Clover turned it over carefully with one paw.\n\n\"It is wrinkly,\" she said.\n\n\"So is Marmalade after rain,\" Pepper said.\n\nMarmalade looked offended.\n\nThe garden laughed in little cat sounds, and the day began again."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false},"right":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":63,"body":"Soon the garden was full of tiny questions.\n\nWhy did beetles hide under stones?\n\nWhy did shadows stretch longer in the evening?\n\nWhy did Clover's leaf get crispy in the sun and floppy in the rain?\n\nWhy did Pepper pretend not to like games and then play anyway?\n\nPearl asked the most questions, but Mist wondered things too.\n\nSnowdrop never snapped, \"Stop asking.\" She said, \"Let's look.\" Or, \"Let's listen.\" Or, \"Let's find out safely.\""},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false}},{"type":"spread","label":"Chapter Eight: Puddles After Rain","left":{"type":"story","label":"Chapter Eight: Puddles After Rain","page":{"number":64,"body":"By the time Mist and Pearl were four weeks old, their paws were steadier.\n\nThey could toddle across the blanket without tipping over. They could drink from the shallow bowl without putting both front paws in it.\n\nThey could follow Snowdrop from the den to the lavender bushes and back again.\n\nMist still bumped into things.\n\nPearl still asked why the things had been there.\n\nSnowdrop still counted them whenever they passed behind a flowerpot.\n\nOne gray and white.\n\nOne white.\n\nBoth safe."},"chapter":{"label":"Chapter Eight","title":"Puddles After Rain","startPage":57,"scene":{"image":"puddles-after-rain.png","title":"Puddles After Rain","caption":"Careful paws discover shiny puddles after the storm."},"displayTitle":"Chapter Eight: Puddles After Rain"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"illustration","label":"Chapter Nine: Quiet Beside Pepper","scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"targetPageNumber":65},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":65,"body":"One afternoon, Mist found Pepper sitting alone by the fence.\n\n\"Play?\" Mist squeaked.\n\nPepper did not answer.\n\nMist looked at Snowdrop.\n\nSnowdrop lowered her voice. \"Pepper wants quiet right now.\"\n\n\"Why?\"\n\n\"Because everyone feels different things at different times,\" Snowdrop said. \"Pepper wants quiet, so we can stay near him without making him play.\"\n\nMist looked at Pepper again.\n\nThen he sat down beside him without pouncing."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":true}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":66,"body":"Pepper did not say thank you.\n\nHe did not smile.\n\nHe did not suddenly begin a game.\n\nHe only sat beside Mist and watched a beetle climb the fence post.\n\nMist watched too.\n\nThe beetle reached a crack in the wood, stopped, turned around, and went the other way.\n\nMist looked at Pepper.\n\nPepper's tail curled gently around Mist's paws.\n\nThat was all.\n\nMist seemed to understand that it was enough."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":67,"body":"Snowdrop taught the kittens to listen to rain on the roof, bees in the flowers, wings in the bushes, and the soft warning sound grown cats made when a game became too rough.\n\nPearl loved listening to the garden.\n\n\"The grass whispers,\" she said.\n\n\"The fence creaks,\" said Mist.\n\n\"Marmalade snores,\" said Pearl.\n\n\"I do not snore,\" said Marmalade, waking himself up with a snort.\n\nThe kittens laughed so hard they rolled against each other."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":68,"body":"Marmalade looked embarrassed, so Pearl climbed carefully onto his paw and whispered, \"Your snore is cozy.\"\n\nMarmalade smiled.\n\nSnowdrop smiled too.\n\nLater, Poppy showed the kittens how to listen for the flutter of wings before a bird appeared on the wall.\n\nClover showed them how a dry leaf made different sounds on stone, grass, and blanket.\n\nPepper showed them nothing on purpose, but Mist copied the way he tilted one ear toward far-off footsteps."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":69,"body":"The kittens began to know the garden by sound.\n\nBuzz meant bees.\n\nTap meant a beetle on the water bowl.\n\nScritch meant Clover was moving her leaf.\n\nThump meant Marmalade had rolled over.\n\nSilence could mean many things.\n\nIt could mean Pepper was thinking.\n\nIt could mean Poppy had seen something from the fence.\n\nIt could mean Pearl had put both front paws into the water bowl and was waiting to see who noticed.\n\nSnowdrop usually noticed."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":70,"body":"One quiet afternoon, Snowdrop pretended not to notice for three whole breaths.\n\nPearl stood in the bowl with wet paws and a very serious face.\n\nMist stood beside her, not in the bowl, but clearly considering it.\n\n\"Why is water cold?\" Pearl asked.\n\n\"Because it is not sun,\" said Marmalade.\n\n\"That is not an answer,\" said Pepper.\n\n\"It is a Marmalade answer,\" said Poppy.\n\nSnowdrop lifted Pearl out and dried her paws.\n\n\"Cold water belongs in the bowl,\" she said."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":71,"body":"Mist liked to practice sitting still with Pepper.\n\nAt first, he lasted three blinks.\n\nThen five.\n\nThen long enough for an ant to cross a stone.\n\nPearl tried too, but sitting still made more questions climb into her mouth.\n\n\"Why do ants carry crumbs?\"\n\n\"Why do crumbs break?\"\n\n\"Why does Marmalade always know when someone says crumbs?\"\n\nMarmalade opened one eye. \"I have a gift.\"\n\nPepper closed both eyes.\n\nSnowdrop pressed her whiskers together so she would not laugh."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":72,"body":"That evening, the garden played a quiet game.\n\nPoppy dropped a pebble into a flowerpot.\n\nPlink.\n\nClover dragged the leopard-tail leaf across a stone.\n\nScritch.\n\nMarmalade tapped his tail.\n\nThump.\n\nPepper flicked his one white paw against the fence.\n\nTock.\n\nMist and Pearl listened with their ears high.\n\nThen Snowdrop asked, \"What did you hear?\"\n\nPearl answered first. \"Everyone.\""},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":73,"body":"Mist began to hear when Pearl was about to tumble.\n\nThere was a tiny skid sound before it happened.\n\nPearl began to hear when Mist was about to climb.\n\nThere was a tiny determined huff before he put his paw up.\n\nSnowdrop heard both sounds.\n\nSometimes she stopped the tumble or the climb.\n\nSometimes she let the kittens try, if the landing was soft and the height was small.\n\nLearning was not only stopping.\n\nLearning was also watching close."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":74,"body":"Frost visited again near sunset.\n\nMist showed her how long he could sit beside Pepper.\n\nPearl showed her how the floorboard sang.\n\nFrost listened to every sound as if it mattered.\n\n\"They are steadier,\" she said.\n\n\"Most of the time,\" Snowdrop answered.\n\nPearl stepped on the floorboard.\n\nEek-eek.\n\nMist stepped after her.\n\nEeek.\n\nFrost's eyes softened.\n\n\"Most of the time is a good beginning.\""},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":75,"body":"When Frost left, the kittens did not cry.\n\nPearl watched until Frost disappeared behind the lavender.\n\nMist leaned against Snowdrop's leg.\n\n\"Back?\" he asked.\n\n\"Yes,\" said Snowdrop. \"She comes back.\"\n\nPearl looked up. \"Why does going away feel funny?\"\n\nSnowdrop thought before answering.\n\n\"Because you like who left.\"\n\nPearl pressed against Snowdrop's other side.\n\nThe lavender shadows grew long around all three of them."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false}},{"type":"spread","label":"Chapter Nine: Quiet Beside Pepper","left":{"type":"story","label":"Chapter Nine: Quiet Beside Pepper","page":{"number":76,"body":"That night, Snowdrop slept deeply for the first time since Frost had arrived with the kittens.\n\nShe woke once when Mist sneezed.\n\nShe woke again when Pearl asked the dark why it was dark.\n\nThen morning came, pink and quiet.\n\nThe kittens tumbled toward the doorway.\n\n\"Outside?\" asked Mist.\n\n\"Outside,\" said Snowdrop.\n\nThe garden waited beyond the lavender.\n\nSo did the lane.\n\nAnd the gate was open just a little."},"chapter":{"label":"Chapter Nine","title":"Quiet Beside Pepper","startPage":65,"scene":{"image":"quiet-beside-pepper.png","title":"Quiet Beside Pepper","caption":"Mist learns to sit quietly beside Pepper."},"displayTitle":"Chapter Nine: Quiet Beside Pepper"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Ten: Beyond the Lavender","left":{"type":"illustration","label":"Chapter Ten: Beyond the Lavender","scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"targetPageNumber":77},"right":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":77,"body":"By the time Mist and Pearl were five weeks old, they wanted to explore everything.\n\nThey wanted to know what was behind the flowerpots, under the bench, inside the hollow log, and beyond the garden gate.\n\n\"Wanting to know things is good,\" Snowdrop told them. \"It helps you learn. But questions still need careful paws.\"\n\n\"Is Caution a cat?\" asked Pearl.\n\n\"Today, Caution is me,\" said Snowdrop.\n\nShe led them on their first tiny expedition beyond the lavender bushes."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":true}},{"type":"spread","label":"Chapter Ten: Beyond the Lavender","left":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":78,"body":"Marmalade guarded the back.\n\nPepper checked the shadows.\n\nPoppy pointed out safe stepping stones.\n\nClover carried a new leopard-tail leaf in case a proper expedition needed a proper flag.\n\nBeyond the lavender, the lane smelled different.\n\nThere was warm dust, old wood, dry grass, and the sharp green smell of crushed leaves.\n\nMist sniffed so hard he sneezed.\n\nPearl found a trail of ants and crouched low to watch them carry crumbs."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":79,"body":"\"Where are they going?\" Pearl asked.\n\n\"Home, probably,\" said Poppy.\n\n\"Do ants have blankets?\" asked Pearl.\n\n\"Maybe tiny ones,\" said Clover.\n\nMist started to put one paw in the ant trail, then stopped.\n\n\"Would that scare them?\"\n\nSnowdrop touched his ear with her nose. \"That was a careful question.\"\n\nMist pulled his paw back and watched instead.\n\nThe ants walked around a crumb, over a twig, and past the shadow of his paw."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Ten: Beyond the Lavender","left":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":80,"body":"Farther down the lane, a hollow log rested beside the fence.\n\nPearl wanted to look inside.\n\nMist wanted to climb on top.\n\nMarmalade wanted to know whether anyone had left breakfast in it.\n\nSnowdrop sniffed the opening first.\n\nIt smelled of old wood, damp leaves, and nothing sharp.\n\n\"One at a time,\" she said.\n\nPearl peeked in.\n\n\"Dark,\" she whispered.\n\nMist climbed halfway up the side and slid down into a pile of leaves.\n\n\"Soft,\" he said."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":81,"body":"The pile of leaves was softer than it looked.\n\nMist rolled once and came up with a brown leaf stuck to his gray patch.\n\nPearl laughed so hard she hiccuped.\n\nClover inspected the leaf.\n\n\"Not a leopard tail,\" she said. \"Too round.\"\n\nPoppy brushed it off Mist's head.\n\nPepper watched the fence line.\n\nSnowdrop noticed how the group moved around the kittens now: one cat looking, one cat guiding, one cat making jokes, one cat carrying a leaf."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Ten: Beyond the Lavender","left":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":82,"body":"At the bend in the lane, the wind pushed a crumpled paper scrap across the dust.\n\nPearl gasped. \"It runs!\"\n\nMist chased it two steps before Snowdrop's tail blocked him.\n\n\"We watch first,\" Snowdrop said.\n\nThe paper flipped, fluttered, and caught on a weed.\n\nPearl crept closer.\n\n\"Is it alive?\"\n\nPepper sniffed it. \"No.\"\n\nMarmalade sniffed it too. \"Also not breakfast.\"\n\nClover tapped it with the leopard-tail leaf, just to be sure."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false},"right":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":83,"body":"The expedition took longer than Snowdrop expected.\n\nEvery pebble needed a question. Every crack in the path needed inspection. Every weed seemed to have a story Pearl wanted to hear.\n\nMist practiced climbing only the low things.\n\nPearl practiced asking before touching anything that buzzed, skittered, or looked like it might be someone else's treasure.\n\nSnowdrop practiced saying, \"Wait,\" without sounding worried.\n\nShe did not always succeed.\n\nMarmalade said she sounded like a very polite bell."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false}},{"type":"spread","label":"Chapter Ten: Beyond the Lavender","left":{"type":"story","label":"Chapter Ten: Beyond the Lavender","page":{"number":84,"body":"On the way back, Clover's new leopard-tail leaf caught under Mist's paw.\n\nMist did not mean to step on it.\n\nPearl did not mean to bump into Mist.\n\nClover did not mean to tug so hard.\n\nBut all three things happened at once.\n\nThe leaf tore in half.\n\nClover's eyes filled with tears.\n\nFor a moment, the lane was silent.\n\nMist looked at the torn leaf.\n\nPearl looked at Clover.\n\nSnowdrop waited."},"chapter":{"label":"Chapter Ten","title":"Beyond the Lavender","startPage":77,"scene":{"image":"expedition.png","title":"Beyond the Lavender","caption":"Questions and careful paws walk together."},"displayTitle":"Chapter Ten: Beyond the Lavender"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Eleven: Twin Leopard Tails","left":{"type":"illustration","label":"Chapter Eleven: Twin Leopard Tails","scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"targetPageNumber":85},"right":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":85,"body":"\"I did it,\" Pearl whispered. \"I am sorry.\"\n\nMist lowered his ears. \"Me too.\"\n\nClover sniffed. \"It was my best leopard tail.\"\n\nPearl pushed one half of the leaf toward Clover and kept the other half near her own paws.\n\n\"Can it be two leopard tails?\"\n\nClover thought about this.\n\nThe leaf halves curled on the dusty path.\n\n\"Twin leopard tails,\" Clover said at last.\n\nMist nudged his half closer.\n\n\"For two captains,\" he said."},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":true}},{"type":"spread","label":"Chapter Eleven: Twin Leopard Tails","left":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":86,"body":"Clover liked that.\n\nShe gave one half to Pearl and one half to Mist, but only until they reached the garden.\n\n\"Captains must carry carefully,\" she said.\n\nPearl carried her half in her mouth.\n\nMist carried his and walked so proudly that he nearly tripped over his own feet.\n\nSnowdrop walked beside them.\n\nThe lane felt less big on the way home.\n\nThe lavender bushes appeared ahead like purple flags.\n\nHome smelled sweet and familiar."},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":false},"right":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":87,"body":"Back in the garden, the kittens showed everyone their leaf halves as if they had returned from the far side of the world.\n\nPoppy admired them.\n\nMarmalade asked if captains still took naps.\n\nPepper said good captains did.\n\nClover placed the two halves side by side near the sunny stone.\n\n\"They match,\" Pearl said.\n\n\"They used to be one thing,\" said Mist.\n\n\"Now they are two things,\" said Clover.\n\nSnowdrop watched Pearl lean against Clover's shoulder.\n\nThat helped too."},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":false}},{"type":"spread","label":"Chapter Eleven: Twin Leopard Tails","left":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":88,"body":"That night, Mist and Pearl slept hard.\n\nTheir paws twitched with lane dreams.\n\nSnowdrop sat by the round window and thought about the open gate, the ants, the hollow log, the paper scrap, and the torn leaf.\n\nThe world outside the lavender was larger than the garden.\n\nThe kittens were larger than they had been.\n\nNot large.\n\nNot yet.\n\nBut larger.\n\nSnowdrop rested her chin on her paws.\n\nTomorrow would bring more questions."},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":false},"right":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":89,"body":"By the time Mist and Pearl were six weeks old, they could run.\n\nNot far.\n\nNot straight.\n\nNot always on purpose.\n\nBut they could run.\n\nThey raced from the blanket to the doorway, from the doorway to the lavender, from the lavender to Marmalade's sunny stone, and from Marmalade's sunny stone straight into Marmalade.\n\n\"Oof,\" said Marmalade.\n\n\"Sorry!\" squeaked Mist.\n\n\"Sorry!\" squeaked Pearl.\n\nMarmalade rolled onto his back. \"If I am going to be a finish line, I require payment.\""},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":false}},{"type":"spread","label":"Chapter Eleven: Twin Leopard Tails","left":{"type":"story","label":"Chapter Eleven: Twin Leopard Tails","page":{"number":90,"body":"\"What payment?\" asked Mist.\n\n\"One nap,\" said Marmalade. \"Beside me. Immediately.\"\n\nThe kittens paid him double.\n\nAfter the nap, Poppy set up a race from the flowerpot to the short grass.\n\nPepper was the judge.\n\nClover waved one half of the leopard-tail leaf as a flag.\n\nSnowdrop stood where the path curved, ready to guide any kitten who forgot how turning worked.\n\nMist ran fast.\n\nPearl ran wiggly.\n\nThey both arrived laughing."},"chapter":{"label":"Chapter Eleven","title":"Twin Leopard Tails","startPage":85,"scene":{"image":"twin-leopard-tails.png","title":"Twin Leopard Tails","caption":"A torn leaf becomes two treasures for careful captains."},"displayTitle":"Chapter Eleven: Twin Leopard Tails"},"chapterStart":false},"right":{"type":"blank","label":""}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"illustration","label":"Chapter Twelve: Two Months Old","scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"targetPageNumber":91},"right":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":91,"body":"A windy afternoon shook the garden until leaves spun across the path.\n\nThe shed roof creaked. The lavender bent and sprang back. The round window rattled in its frame.\n\nPearl did not like the wind. It pushed her whiskers the wrong way.\n\n\"I do not want to go outside,\" she said.\n\nMist puffed up his chest. \"I am not scared.\"\n\nBut his amber eyes kept sliding toward the rattling window.\n\nSnowdrop lay down between them.\n\n\"You do not have to pretend,\" she said."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":true}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":92,"body":"\"You can say, 'I am scared, but I will try with someone beside me,'\" Snowdrop told them.\n\nSo they tried together.\n\nSnowdrop walked first. Mist pressed against one side, and Pearl pressed against the other.\n\nOutside, the wind was wild but wonderful.\n\nIt sent leaves skittering like little brown mice. It rolled a round seedpod across the path. It made the lavender bushes bow and whisper.\n\nPearl's green eyes grew wide.\n\n\"The wind is invisible,\" she said. \"But it still moves things.\""},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false},"right":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":93,"body":"Mist batted gently at a tumbling leaf.\n\n\"Like a hidden cat,\" he said.\n\nThe wind puffed through Snowdrop's white fur. She watched the kittens sniff, study, and wonder.\n\nThey were still small, but they were learning how to be careful without stopping their questions.\n\nThat was a good kind of growing.\n\nWhen the wind pushed too hard, Pearl stepped behind Snowdrop.\n\nWhen it softened, she stepped out again.\n\nSnowdrop did not hurry her."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":94,"body":"When Mist and Pearl were seven weeks old, Frost visited again.\n\nShe found them in the garden with Snowdrop.\n\nMist was showing Pepper how he could hop over a stick. Pearl was showing Poppy a pebble shaped almost like a heart. Clover was teaching both kittens how to drag a leaf without stepping on it.\n\nFrost watched quietly for a long moment.\n\n\"They are changing,\" she said.\n\nSnowdrop nodded. \"They ask more questions now.\"\n\n\"And?\"\n\n\"They listen to the answers,\" said Snowdrop. \"Most of the time.\""},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false},"right":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":95,"body":"Pearl ran over and pressed the heart-shaped pebble near Frost's paw.\n\n\"This is for you because you looked tired.\"\n\nFrost's eyes softened.\n\nMist showed Frost how he could climb Marmalade Hill without using the tail.\n\nMarmalade looked proud of himself and of Mist.\n\nPepper showed Frost how Mist could sit beside him without pouncing.\n\nPoppy showed Frost the safe stepping stones.\n\nClover showed Frost the twin leopard tails.\n\nFrost looked at Snowdrop.\n\n\"You have all been busy.\""},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":96,"body":"At last, Mist and Pearl were two months old.\n\nThey were still kittens, but they were no longer tiny wobbling bundles.\n\nMist could climb Marmalade Hill without using the tail.\n\nPearl could watch a bee without poking it.\n\nBoth kittens could ask questions, wait for answers, and notice when another cat needed kindness.\n\nFrost came at noon, just as she had on the day she first brought them.\n\nThe garden was bright. The lavender smelled sweet."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false},"right":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":97,"body":"The warm stone waited for Marmalade.\n\nThe fence waited for Poppy.\n\nThe shadows waited for Pepper.\n\nClover had found a leaf so grand she called it a royal leopard tail.\n\nSnowdrop stood in the doorway with Mist on one side and Pearl on the other.\n\nFrost nuzzled Mist, then Pearl, then Snowdrop.\n\n\"You took good care of them,\" she said.\n\nSnowdrop blinked once.\n\nThat meant, \"Of course.\"\n\nBut inside, Snowdrop felt bigger than before."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":98,"body":"Not bigger like Marmalade after breakfast, and not taller like Poppy on the fence.\n\nBigger in the heart.\n\nShe had helped Mist and Pearl learn how to ask questions, listen closely, pounce, pause, and say, \"Are you all right?\"\n\nMist rubbed his gray and white cheek against Snowdrop's leg.\n\nPearl looked up with her green eyes.\n\n\"Can we still visit?\"\n\n\"Always,\" said Snowdrop.\n\nFrost smiled.\n\n\"Then this is not goodbye,\" she said.\n\n\"Good,\" said Pearl."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false},"right":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":99,"body":"That evening, the garden settled into purple shadows.\n\nMist and Pearl curled beside Frost in the warmest corner of the den. Marmalade slept by the doorway. Pepper slept with one eye barely open, just in case a pebble needed moving.\n\nPoppy tucked her nose under her tail.\n\nClover slept with one paw on the royal leopard-tail leaf.\n\nSnowdrop sat by the round window.\n\nThe lane was quiet. The lavender bushes were dark. The puddles outside reflected the moon.\n\nSnowdrop's blue eyes watched the garden.\n\nShe was watching over everyone."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false}},{"type":"spread","label":"Chapter Twelve: Two Months Old","left":{"type":"story","label":"Chapter Twelve: Two Months Old","page":{"number":100,"body":"In the morning, Mist woke first.\n\nThen Pearl woke.\n\nThen Marmalade woke because someone stepped on his tail.\n\n\"Breakfast?\" he mumbled.\n\nThe kittens tumbled toward Snowdrop, bigger than before but still bouncy, still squeaky, still full of questions.\n\n\"Why is morning pink?\" asked Pearl.\n\n\"Can shadows race?\" asked Mist.\n\nSnowdrop stood, stretched, and touched noses with them both.\n\nOutside, the garden waited.\n\nAnd Snowdrop, the white cat with bright blue eyes, was ready for whatever the kittens wondered next."},"chapter":{"label":"Chapter Twelve","title":"Two Months Old","startPage":91,"scene":{"image":"two-months.png","title":"Two Months Old","caption":"Mist and Pearl are bigger, kinder, and still full of questions."},"displayTitle":"Chapter Twelve: Two Months Old"},"chapterStart":false},"right":{"type":"back-cover","label":"About This Story","title":"Mist, Pearl, and Snowdrop","copy":"Book One begins in a lavender garden with Snowdrop, a quiet white cat with very bright blue eyes. At dawn, she expects an ordinary day with Marmalade, Pepper, Poppy, and Clover. But by noon, Snowdrop's sister Frost arrives with two three-week-old kittens: Mist, a gray and white kitten with amber eyes, and Pearl, a white kitten with green eyes.\n\nNow Snowdrop has a big job. She must care for Mist and Pearl until they are two months old, keeping them warm, safe, happy, and out of trouble while they wobble, pounce, squeak, chase leaves, discover puddles, ask endless questions, and grow into steadier paws. A cat story about caring for two kittens."}}];
+    const COVER_SPREAD_INDEX = 0;
+    const TURN_DURATION_MS = 180;
+    const PHONE_PAGE_QUERY = '(max-width: 640px)';
+    const phonePageMedia = window.matchMedia(PHONE_PAGE_QUERY);
+    const singlePages = buildSinglePages(spreads);
+    let current = COVER_SPREAD_INDEX;
+    let currentSinglePage = firstSinglePageForSpread(current);
+    let singlePageMode = isSinglePageMode();
+    let locked = false;
+
+    const book = document.getElementById('book');
+    const leftPage = document.getElementById('left-page');
+    const rightPage = document.getElementById('right-page');
+    const turnSheet = document.getElementById('turn-sheet');
+    const turnFront = document.getElementById('turn-front');
+    const turnBack = document.getElementById('turn-back');
+    const prevButton = document.getElementById('prev');
+    const nextButton = document.getElementById('next');
+    const printButton = document.getElementById('print');
+    const spreadLabel = document.getElementById('spread-label');
+    const progress = document.getElementById('progress');
+    const pageStatus = document.getElementById('page-status');
+    const printBook = document.getElementById('print-book');
+
+    function pageClass(page) {
+      if (!page || page.type === 'blank') return 'blank-page';
+      if (page.type === 'cover') return 'cover-surface';
+      if (page.type === 'back-cover') return 'story-page back-cover-page';
+      if (page.type === 'illustration') return 'art-page';
+      return 'story-page';
+    }
+
+    function pageMarkup(page) {
+      if (!page || page.type === 'blank') return '<section class="blank-page-inner" aria-hidden="true"></section>';
+      if (page.type === 'cover') return coverSheetMarkup(page);
+      if (page.type === 'back-cover') return backCoverMarkup(page);
+      if (page.type === 'toc') return tocMarkup(page);
+      if (page.type === 'illustration') return artMarkup(page);
+      return storyMarkup(page);
+    }
+
+    function coverSheetMarkup(page) {
+      return [
+        '<section class="cover-sheet" aria-label="' + escapeHtml(page.scene.title) + '">',
+        '<div class="cover-sheet-art">',
+        '<img src="book-assets/generated/' + page.scene.image + '" alt="' + escapeHtml(page.scene.caption) + '">',
+        '</div>',
+        '<div class="cover-sheet-title">',
+        '<p class="front-kicker">' + escapeHtml(page.seriesLabel) + '</p>',
+        '<h2>' + escapeHtml(page.scene.title) + '</h2>',
+        '<p>' + escapeHtml(page.scene.caption) + '</p>',
+        '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function backCoverMarkup(page) {
+      return [
+        '<section class="back-cover-content">',
+        '<p class="front-kicker">About This Story</p>',
+        '<h2>' + escapeHtml(page.title) + '</h2>',
+        '<div class="front-copy" data-fit-story data-fit-base="16">',
+        markdownParagraphs(page.copy),
+        '</div>',
+        '</section>'
+      ].join('');
+    }
+
+    function tocMarkup(page) {
+      return [
+        '<section class="toc-page">',
+        '<div class="toc-heading">',
+        '<h2>Table of Contents</h2>',
+        '<p>' + escapeHtml(page.tocIntro) + '</p>',
+        '</div>',
+        '<ol class="toc-list" data-fit-story data-fit-base="16">',
+        page.tocEntries.map((entry) => [
+          '<li>',
+          '<a class="toc-link" href="#page-' + entry.pageNumber + '" data-page-number="' + entry.pageNumber + '" aria-label="' + escapeHtml(entry.title + ', page ' + entry.pageNumber) + '">',
+          '<span class="toc-name">' + escapeHtml(entry.title) + '</span>',
+          '<span class="toc-page-num">' + entry.pageNumber + '</span>',
+          '</a>',
+          '</li>'
+        ].join('')).join(''),
+        '</ol>',
+        '</section>'
+      ].join('');
+    }
+
+    function storyMarkup(storyPage) {
+      const page = storyPage.page;
+      return [
+        chapterHeadingMarkup(storyPage),
+        '<div class="story-content" data-fit-story data-fit-base="18">',
+        markdownParagraphs(page.body),
+        '</div>',
+        '<span class="page-num">' + page.number + '</span>'
+      ].join('');
+    }
+
+    function chapterHeadingMarkup(storyPage) {
+      if (!storyPage.chapterStart) return '';
+      return [
+        '<header class="chapter-heading">',
+        '<p class="chapter-kicker">' + escapeHtml(storyPage.chapter.label) + '</p>',
+        '<h2>' + escapeHtml(storyPage.chapter.title) + '</h2>',
+        '</header>'
+      ].join('');
+    }
+
+    function artMarkup(page) {
+      const scene = page.scene;
+      return [
+        '<div class="art-frame">',
+        '<img src="book-assets/generated/' + scene.image + '" alt="' + escapeHtml(scene.title + '. ' + scene.caption) + '">',
+        '</div>',
+        '<div class="art-caption">',
+        '<h2>' + escapeHtml(scene.title) + '</h2>',
+        '<p>' + escapeHtml(scene.caption) + '</p>',
+        '</div>'
+      ].join('');
+    }
+
+    function applyPage(pageElement, page, sideClass) {
+      pageElement.hidden = false;
+      pageElement.className = 'book-page ' + sideClass + ' ' + pageClass(page);
+      pageElement.innerHTML = pageMarkup(page);
+      pageElement.tabIndex = 0;
+      pageElement.setAttribute('aria-hidden', 'false');
+    }
+
+    function buildPrintBook() {
+      printBook.innerHTML = singlePages
+        .filter((entry) => entry.page && entry.page.type !== 'blank')
+        .map((entry, index) => [
+          '<article class="print-page ' + pageClass(entry.page) + ' print-page-' + escapeHtml(entry.page.type) + '" aria-label="' + escapeHtml(printPageLabel(entry, index)) + '">',
+          pageMarkup(entry.page),
+          '</article>'
+        ].join(''))
+        .join('');
+    }
+
+    function printPageLabel(entry, index) {
+      const page = entry.page;
+      if (page.type === 'cover') return 'Printable front cover';
+      if (page.type === 'toc') return 'Printable table of contents';
+      if (page.type === 'illustration') return 'Printable illustration, ' + page.scene.title;
+      if (page.type === 'back-cover') return 'Printable back cover';
+      if (page.type === 'story') return 'Printable story page ' + page.page.number;
+      return 'Printable book page ' + (index + 1);
+    }
+
+    function render() {
+      book.classList.toggle('single-page-mode', singlePageMode);
+      if (singlePageMode) {
+        renderSinglePage();
+        return;
+      }
+
+      renderSpread();
+    }
+
+    function renderSpread() {
+      const spread = spreads[current];
+      const isCover = spread.type === 'cover';
+      book.classList.toggle('cover-mode', isCover);
+
+      if (isCover) {
+        leftPage.hidden = true;
+        leftPage.tabIndex = -1;
+        leftPage.setAttribute('aria-hidden', 'true');
+        leftPage.innerHTML = '';
+        applyPage(rightPage, spread.right, 'right-page');
+        rightPage.setAttribute('aria-label', 'Open book');
+      } else {
+        applyPage(leftPage, spread.left, 'left-page');
+        applyPage(rightPage, spread.right, 'right-page');
+        rightPage.setAttribute('aria-label', 'Next page');
+      }
+
+      spreadLabel.textContent = isCover ? '' : spread.label;
+      pageStatus.textContent = isCover ? 'Showing front cover' : 'Showing ' + spread.label;
+      prevButton.disabled = current === 0;
+      nextButton.disabled = current === spreads.length - 1;
+      progress.style.width = (((current + 1) / spreads.length) * 100) + '%';
+      fitStoryPages(leftPage);
+      fitStoryPages(rightPage);
+    }
+
+    function renderSinglePage() {
+      const entry = singlePages[currentSinglePage] ?? singlePages[0];
+      const isCover = entry.page.type === 'cover';
+
+      book.classList.toggle('cover-mode', isCover);
+      leftPage.hidden = true;
+      leftPage.tabIndex = -1;
+      leftPage.setAttribute('aria-hidden', 'true');
+      leftPage.innerHTML = '';
+      applyPage(rightPage, entry.page, 'right-page');
+      rightPage.setAttribute('aria-label', currentSinglePage === singlePages.length - 1 ? 'Last page' : 'Next page');
+
+      spreadLabel.textContent = entry.label;
+      pageStatus.textContent = entry.status;
+      prevButton.disabled = currentSinglePage === 0;
+      nextButton.disabled = currentSinglePage === singlePages.length - 1;
+      progress.style.width = (((currentSinglePage + 1) / singlePages.length) * 100) + '%';
+      fitStoryPages(rightPage);
+    }
+
+    function turn(delta) {
+      if (locked) return;
+      if (singlePageMode) {
+        turnSinglePage(delta);
+        return;
+      }
+
+      const next = current + delta;
+      if (next < 0 || next >= spreads.length) return;
+
+      locked = true;
+      turnTo(next, delta);
+    }
+
+    function turnSinglePage(delta) {
+      const next = currentSinglePage + delta;
+      if (next < 0 || next >= singlePages.length) return;
+
+      locked = true;
+      turnSinglePageTo(next, delta);
+    }
+
+    function turnTo(next, direction) {
+      const currentSpread = spreads[current];
+      const nextSpread = spreads[next];
+
+      animateTurn({
+        direction,
+        frontPage: direction > 0 ? currentSpread.right : currentSpread.left,
+        backPage: direction > 0 ? nextSpread.left : nextSpread.right,
+        onComplete: () => {
+          current = next;
+          currentSinglePage = firstSinglePageForSpread(current);
+        },
+      });
+    }
+
+    function turnSinglePageTo(next, direction) {
+      const currentEntry = singlePages[currentSinglePage];
+      const nextEntry = singlePages[next];
+
+      animateTurn({
+        direction,
+        frontPage: currentEntry.page,
+        backPage: nextEntry.page,
+        onComplete: () => {
+          currentSinglePage = next;
+          current = nextEntry.spreadIndex;
+        },
+      });
+    }
+
+    function animateTurn({ direction, frontPage, backPage, onComplete }) {
+      locked = true;
+      book.classList.add(direction > 0 ? 'turning-next' : 'turning-prev');
+      turnSheet.className = 'turn-sheet active ' + (direction > 0 ? 'next' : 'prev');
+      setTurnFace(turnFront, 'turn-front', frontPage);
+      setTurnFace(turnBack, 'turn-back', backPage);
+      fitStoryPages(turnSheet);
+
+      window.setTimeout(() => {
+        onComplete();
+        render();
+        resetTurnSheet();
+        locked = false;
+      }, TURN_DURATION_MS);
+    }
+
+    function resetTurnSheet() {
+      book.classList.remove('turning-next', 'turning-prev');
+      turnSheet.className = 'turn-sheet';
+      turnFront.className = 'turn-face turn-front';
+      turnBack.className = 'turn-face turn-back';
+      turnFront.innerHTML = '';
+      turnBack.innerHTML = '';
+    }
+
+    function setTurnFace(face, baseClass, page) {
+      face.className = 'turn-face ' + baseClass + ' ' + pageClass(page);
+      face.innerHTML = pageMarkup(page);
+    }
+
+    function jumpToStoryPage(pageNumber) {
+      if (locked) return;
+
+      if (singlePageMode) {
+        const next = findSinglePageForStoryPage(pageNumber);
+        if (next < 0) return;
+        if (next === currentSinglePage) return;
+        turnSinglePageTo(next, next > currentSinglePage ? 1 : -1);
+        return;
+      }
+
+      const next = findSpreadForStoryPage(pageNumber);
+      if (next < 0 || next === current) return;
+      turnTo(next, next > current ? 1 : -1);
+    }
+
+    function findSinglePageForStoryPage(pageNumber) {
+      return singlePages.findIndex((entry) => entry.page?.type === 'story' && entry.page.page.number === pageNumber);
+    }
+
+    function findSpreadForStoryPage(pageNumber) {
+      return spreads.findIndex((spread) => {
+        if (spread.type === 'cover') return false;
+        return [spread.left, spread.right].some((page) => page?.type === 'story' && page.page.number === pageNumber);
+      });
+    }
+
+    function fitStoryPages(root) {
+      root.querySelectorAll('[data-fit-story]').forEach((content) => {
+        const baseSize = Number(content.getAttribute('data-fit-base')) || 18;
+        content.style.setProperty('--story-font-size', baseSize + 'px');
+        let size = baseSize;
+        while (content.scrollHeight > content.clientHeight && size > 11) {
+          size -= 0.5;
+          content.style.setProperty('--story-font-size', size + 'px');
+        }
+      });
+    }
+
+    function buildSinglePages(sourceSpreads) {
+      const pages = [];
+      sourceSpreads.forEach((spread, spreadIndex) => {
+        if (spread.type === 'cover') {
+          pages.push(singlePageEntry(spread.right, spreadIndex, ''));
+          return;
+        }
+
+        [spread.left, spread.right].forEach((page) => {
+          if (!page || page.type === 'blank') return;
+          pages.push(singlePageEntry(page, spreadIndex, spread.label));
+        });
+      });
+      return pages;
+    }
+
+    function singlePageEntry(page, spreadIndex, spreadLabelText) {
+      const label = singlePageLabel(page, spreadLabelText);
+      return {
+        page,
+        spreadIndex,
+        label,
+        status: label ? 'Showing ' + label : 'Showing front cover',
+      };
+    }
+
+    function singlePageLabel(page, spreadLabelText) {
+      if (!page || page.type === 'cover') return '';
+      if (page.type === 'toc') return 'Table of Contents';
+      if (page.type === 'back-cover') return 'About This Story';
+      if (page.type === 'illustration') return page.scene.title;
+      if (page.type === 'story') return spreadLabelText;
+      return spreadLabelText;
+    }
+
+    function firstSinglePageForSpread(spreadIndex) {
+      const pageIndex = singlePages.findIndex((entry) => entry.spreadIndex === spreadIndex);
+      return pageIndex < 0 ? 0 : pageIndex;
+    }
+
+    function isSinglePageMode() {
+      return phonePageMedia.matches;
+    }
+
+    function syncReaderMode() {
+      const nextMode = isSinglePageMode();
+      if (nextMode === singlePageMode) return false;
+
+      if (nextMode) {
+        currentSinglePage = firstSinglePageForSpread(current);
+      } else {
+        current = singlePages[currentSinglePage]?.spreadIndex ?? current;
+      }
+
+      singlePageMode = nextMode;
+      locked = false;
+      resetTurnSheet();
+      return true;
+    }
+
+    function markdownParagraphs(markdown) {
+      return markdown
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean)
+        .map((paragraph) => '<p>' + inlineMarkdown(paragraph) + '</p>')
+        .join('');
+    }
+
+    function inlineMarkdown(text) {
+      return escapeHtml(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+
+    function handlePageClick(event, direction) {
+      const tocLink = event.target.closest('[data-page-number]');
+      if (tocLink) {
+        event.preventDefault();
+        event.stopPropagation();
+        jumpToStoryPage(Number(tocLink.dataset.pageNumber));
+        return;
+      }
+      turn(direction);
+    }
+
+    function handlePrint() {
+      buildPrintBook();
+      window.print();
+    }
+
+    nextButton.addEventListener('click', () => turn(1));
+    prevButton.addEventListener('click', () => turn(-1));
+    printButton.addEventListener('click', handlePrint);
+    rightPage.addEventListener('click', (event) => handlePageClick(event, 1));
+    leftPage.addEventListener('click', (event) => handlePageClick(event, -1));
+    rightPage.addEventListener('keydown', (event) => {
+      if (event.target.closest('[data-page-number]')) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        turn(1);
+      }
+    });
+    leftPage.addEventListener('keydown', (event) => {
+      if (event.target.closest('[data-page-number]')) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        turn(-1);
+      }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        turn(1);
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        turn(-1);
+      }
+    });
+    function handleViewportChange() {
+      if (syncReaderMode()) {
+        render();
+        return;
+      }
+
+      fitStoryPages(leftPage);
+      fitStoryPages(rightPage);
+    }
+
+    phonePageMedia.addEventListener('change', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('beforeprint', buildPrintBook);
+
+    buildPrintBook();
+    render();
+  </script>
+</body>
+</html>
